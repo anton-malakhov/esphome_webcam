@@ -11,6 +11,16 @@ external_components:
 
 ## Example YAML
 ```
+esphome:
+  name: esp-webcam
+  platformio_options:
+    board_build.flash_mode: dio
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+
 external_components:
   - source: components
 

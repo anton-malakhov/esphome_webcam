@@ -6,9 +6,32 @@
 #include "esphome/core/component.h"
 #include "esphome/core/entity_base.h"
 #include "esphome/core/helpers.h"
-#include <esp_camera.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+
+#if 0
+typedef enum {
+    PIXFORMAT_RGB565,    // 2BPP/RGB565
+    PIXFORMAT_YUV422,    // 2BPP/YUV422
+    PIXFORMAT_GRAYSCALE, // 1BPP/GRAYSCALE
+    PIXFORMAT_JPEG,      // JPEG/COMPRESSED
+    PIXFORMAT_RGB888,    // 3BPP/RGB888
+    PIXFORMAT_RAW,       // RAW
+    PIXFORMAT_RGB444,    // 3BP2P/RGB444
+    PIXFORMAT_RGB555,    // 3BP2P/RGB555
+} pixformat_t;
+
+typedef struct {
+    uint8_t * buf;              // Pointer to the pixel data
+    size_t len;                 // Length of the buffer in bytes
+    size_t width;               // Width of the buffer in pixels
+    size_t height;              // Height of the buffer in pixels
+    pixformat_t format;         // Format of the pixel data
+    struct timeval timestamp;   // Timestamp since boot of the first DMA buffer of the frame
+} camera_fb_t;
+#else
+#include "esp_camera.h"
+#endif
 
 namespace esphome {
 namespace esp32_camera {
@@ -106,37 +129,8 @@ class ESP32Camera : public Component, public EntityBase {
   ESP32Camera();
 
   /* setters */
-  /* -- pin assignment */
-  void set_data_pins(std::array<uint8_t, 8> pins);
-  void set_vsync_pin(uint8_t pin);
-  void set_href_pin(uint8_t pin);
-  void set_pixel_clock_pin(uint8_t pin);
-  void set_external_clock(uint8_t pin, uint32_t frequency);
-  void set_i2c_pins(uint8_t sda, uint8_t scl);
-  void set_reset_pin(uint8_t pin);
-  void set_power_down_pin(uint8_t pin);
   /* -- image */
   void set_frame_size(ESP32CameraFrameSize size);
-  void set_jpeg_quality(uint8_t quality);
-  void set_vertical_flip(bool vertical_flip);
-  void set_horizontal_mirror(bool horizontal_mirror);
-  void set_contrast(int contrast);
-  void set_brightness(int brightness);
-  void set_saturation(int saturation);
-  void set_special_effect(ESP32SpecialEffect effect);
-  /* -- exposure */
-  void set_aec_mode(ESP32GainControlMode mode);
-  void set_aec2(bool aec2);
-  void set_ae_level(int ae_level);
-  void set_aec_value(uint32_t aec_value);
-  /* -- gains */
-  void set_agc_mode(ESP32GainControlMode mode);
-  void set_agc_value(uint8_t agc_value);
-  void set_agc_gain_ceiling(ESP32AgcGainCeiling gain_ceiling);
-  /* -- white balance */
-  void set_wb_mode(ESP32WhiteBalanceMode mode);
-  /* -- test */
-  void set_test_pattern(bool test_pattern);
   /* -- framerates */
   void set_max_update_interval(uint32_t max_update_interval);
   void set_idle_update_interval(uint32_t idle_update_interval);
@@ -200,8 +194,8 @@ class ESP32Camera : public Component, public EntityBase {
   CallbackManager<void()> stream_start_callback_{};
   CallbackManager<void()> stream_stop_callback_{};
 
-  uint32_t last_idle_request_{0};
-  uint32_t last_update_{0};
+  uint64_t last_idle_request_{0};
+  uint64_t last_update_{0};
 };
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
