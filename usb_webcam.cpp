@@ -9,7 +9,7 @@
 #include <freertos/task.h>
 
 
-static const char *const TAG = "esp32_webcam";
+static const char *const TAG = "usb_webcam";
 
 #define BIT0_FRAME_START     (0x01 << 0)
 #define BIT1_NEW_FRAME_START (0x01 << 1)
@@ -101,7 +101,7 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
     }
 }
 
-esp_err_t esp_camera_init(camera_config_t *cfg) {
+esp_err_t esp_camera_init(ESP32CameraFrameSize fs) {
   memset(&s_fb, 0, sizeof(camera_fb_t));
   s_evt_handle = xEventGroupCreate();
   if (s_evt_handle == NULL) {
@@ -138,25 +138,25 @@ esp_err_t esp_camera_init(camera_config_t *cfg) {
       .flags = 0
   };
 
-  switch (cfg->frame_size) {
-    case FRAMESIZE_QQVGA: uvc_config.frame_width = 160; uvc_config.frame_height = 120; break;
-    case FRAMESIZE_QCIF:  uvc_config.frame_width = 176; uvc_config.frame_height = 155; break;
-    case FRAMESIZE_HQVGA: uvc_config.frame_width = 240; uvc_config.frame_height = 176; break;
-    case FRAMESIZE_QVGA:  uvc_config.frame_width = 320; uvc_config.frame_height = 240; break;
-    case FRAMESIZE_CIF:   uvc_config.frame_width = 400; uvc_config.frame_height = 296; break;
-    case FRAMESIZE_VGA:   uvc_config.frame_width = 640; uvc_config.frame_height = 480; break;
-    case FRAMESIZE_SVGA:  uvc_config.frame_width = 800; uvc_config.frame_height = 600; break;
-    case FRAMESIZE_XGA:   uvc_config.frame_width = 1024; uvc_config.frame_height = 768; break;
-    case FRAMESIZE_SXGA:  uvc_config.frame_width = 1280; uvc_config.frame_height = 1024; break;
-    case FRAMESIZE_UXGA:  uvc_config.frame_width = 1600; uvc_config.frame_height = 1200; break;
-    case FRAMESIZE_FHD:   uvc_config.frame_width = 1920; uvc_config.frame_height = 1080; break;
-    case FRAMESIZE_P_HD:  uvc_config.frame_width = 720; uvc_config.frame_height = 1280; break;
-    case FRAMESIZE_P_3MP: uvc_config.frame_width = 864; uvc_config.frame_height = 1536; break;
-    case FRAMESIZE_QXGA:  uvc_config.frame_width = 2048; uvc_config.frame_height = 1536; break;
-    case FRAMESIZE_QHD:   uvc_config.frame_width = 2560; uvc_config.frame_height = 1440; break;
-    case FRAMESIZE_WQXGA: uvc_config.frame_width = 2560; uvc_config.frame_height = 1600; break;
-    case FRAMESIZE_P_FHD: uvc_config.frame_width = 1080; uvc_config.frame_height = 1920; break;
-    case FRAMESIZE_QSXGA: uvc_config.frame_width = 2560; uvc_config.frame_height = 1920; break;
+  switch (fs) {
+    case ESP32_CAMERA_SIZE_160X120:   uvc_config.frame_width = 160;  uvc_config.frame_height = 120; break;
+    case ESP32_CAMERA_SIZE_176X144:   uvc_config.frame_width = 176;  uvc_config.frame_height = 144; break;
+    case ESP32_CAMERA_SIZE_240X176:   uvc_config.frame_width = 240;  uvc_config.frame_height = 176; break;
+    case ESP32_CAMERA_SIZE_320X240:   uvc_config.frame_width = 320;  uvc_config.frame_height = 240; break;
+    case ESP32_CAMERA_SIZE_400X296:   uvc_config.frame_width = 400;  uvc_config.frame_height = 296; break;
+    case ESP32_CAMERA_SIZE_640X480:   uvc_config.frame_width = 640;  uvc_config.frame_height = 480; break;
+    case ESP32_CAMERA_SIZE_800X600:   uvc_config.frame_width = 800;  uvc_config.frame_height = 600; break;
+    case ESP32_CAMERA_SIZE_1024X768:  uvc_config.frame_width = 1024; uvc_config.frame_height = 768; break;
+    case ESP32_CAMERA_SIZE_1280X1024: uvc_config.frame_width = 1280; uvc_config.frame_height = 1024; break;
+    case ESP32_CAMERA_SIZE_1600X1200: uvc_config.frame_width = 1600; uvc_config.frame_height = 1200; break;
+    case ESP32_CAMERA_SIZE_1920X1080: uvc_config.frame_width = 1920; uvc_config.frame_height = 1080; break;
+    case ESP32_CAMERA_SIZE_720X1280:  uvc_config.frame_width = 720;  uvc_config.frame_height = 1280; break;
+    case ESP32_CAMERA_SIZE_864X1536:  uvc_config.frame_width = 864;  uvc_config.frame_height = 1536; break;
+    case ESP32_CAMERA_SIZE_2048X1536: uvc_config.frame_width = 2048; uvc_config.frame_height = 1536; break;
+    case ESP32_CAMERA_SIZE_2560X1440: uvc_config.frame_width = 2560; uvc_config.frame_height = 1440; break;
+    case ESP32_CAMERA_SIZE_2560X1600: uvc_config.frame_width = 2560; uvc_config.frame_height = 1600; break;
+    case ESP32_CAMERA_SIZE_1080X1920: uvc_config.frame_width = 1080; uvc_config.frame_height = 1920; break;
+    case ESP32_CAMERA_SIZE_2560X1920: uvc_config.frame_width = 2560; uvc_config.frame_height = 1920; break;
     default: return ESP_ERR_INVALID_ARG;
   }
   /* config to enable uvc function */
@@ -169,14 +169,11 @@ esp_err_t esp_camera_init(camera_config_t *cfg) {
   * in the callback, we can get the frame list of current device
   */
   ret = usb_streaming_state_register(&stream_state_changed_cb, NULL);
-  ESP_LOGD(TAG, "usb_streaming_state_register: %d", ret);
   if (ret != ESP_OK) return ret;
   /* start usb streaming, UVC and UAC MIC will start streaming because SUSPEND_AFTER_START flags not set */
   ret = usb_streaming_start();
-  ESP_LOGD(TAG, "usb_streaming_start: %d", ret);
   if (ret != ESP_OK) return ret;
   ret = usb_streaming_connect_wait(portMAX_DELAY);
-  ESP_LOGD(TAG, "usb_streaming_connect_wait: %d", ret);
   return ret;
 }
 
@@ -189,7 +186,7 @@ void ESP32Camera::setup() {
   this->last_update_ = esp_timer_get_time();
 
   /* initialize camera */
-  esp_err_t err = esp_camera_init(&this->config_);
+  esp_err_t err = esp_camera_init(this->frame_size);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "esp_camera_init failed: %s", esp_err_to_name(err));
     this->init_error_ = err;
@@ -214,67 +211,65 @@ void ESP32Camera::setup() {
 }
 
 void ESP32Camera::dump_config() {
-  auto conf = this->config_;
-  ESP_LOGCONFIG(TAG, "ESP32 Camera:");
+  ESP_LOGCONFIG(TAG, "ESP32 USB WebCamera:");
   ESP_LOGCONFIG(TAG, "  Name: %s", this->name_.c_str());
-  switch (this->config_.frame_size) {
-    case FRAMESIZE_QQVGA:
+  switch (frame_size) {
+    case ESP32_CAMERA_SIZE_160X120:
       ESP_LOGCONFIG(TAG, "  Resolution: 160x120 (QQVGA)");
       break;
-    case FRAMESIZE_QCIF:
-      ESP_LOGCONFIG(TAG, "  Resolution: 176x155 (QCIF)");
+    case ESP32_CAMERA_SIZE_176X144:
+      ESP_LOGCONFIG(TAG, "  Resolution: 176x144 (QCIF)");
       break;
-    case FRAMESIZE_HQVGA:
+    case ESP32_CAMERA_SIZE_240X176:
       ESP_LOGCONFIG(TAG, "  Resolution: 240x176 (HQVGA)");
       break;
-    case FRAMESIZE_QVGA:
+    case ESP32_CAMERA_SIZE_320X240:
       ESP_LOGCONFIG(TAG, "  Resolution: 320x240 (QVGA)");
       break;
-    case FRAMESIZE_CIF:
+    case ESP32_CAMERA_SIZE_400X296:
       ESP_LOGCONFIG(TAG, "  Resolution: 400x296 (CIF)");
       break;
-    case FRAMESIZE_VGA:
+    case ESP32_CAMERA_SIZE_640X480:
       ESP_LOGCONFIG(TAG, "  Resolution: 640x480 (VGA)");
       break;
-    case FRAMESIZE_SVGA:
+    case ESP32_CAMERA_SIZE_800X600:
       ESP_LOGCONFIG(TAG, "  Resolution: 800x600 (SVGA)");
       break;
-    case FRAMESIZE_XGA:
+    case ESP32_CAMERA_SIZE_1024X768:
       ESP_LOGCONFIG(TAG, "  Resolution: 1024x768 (XGA)");
       break;
-    case FRAMESIZE_SXGA:
+    case ESP32_CAMERA_SIZE_1280X1024:
       ESP_LOGCONFIG(TAG, "  Resolution: 1280x1024 (SXGA)");
       break;
-    case FRAMESIZE_UXGA:
+    case ESP32_CAMERA_SIZE_1600X1200:
       ESP_LOGCONFIG(TAG, "  Resolution: 1600x1200 (UXGA)");
       break;
-    case FRAMESIZE_FHD:
+    case ESP32_CAMERA_SIZE_1920X1080:
       ESP_LOGCONFIG(TAG, "  Resolution: 1920x1080 (FHD)");
       break;
-    case FRAMESIZE_P_HD:
+    case ESP32_CAMERA_SIZE_720X1280:
       ESP_LOGCONFIG(TAG, "  Resolution: 720x1280 (P_HD)");
       break;
-    case FRAMESIZE_P_3MP:
+    case ESP32_CAMERA_SIZE_864X1536:
       ESP_LOGCONFIG(TAG, "  Resolution: 864x1536 (P_3MP)");
       break;
-    case FRAMESIZE_QXGA:
+    case ESP32_CAMERA_SIZE_2048X1536:
       ESP_LOGCONFIG(TAG, "  Resolution: 2048x1536 (QXGA)");
       break;
-    case FRAMESIZE_QHD:
+    case ESP32_CAMERA_SIZE_2560X1440:
       ESP_LOGCONFIG(TAG, "  Resolution: 2560x1440 (QHD)");
       break;
-    case FRAMESIZE_WQXGA:
+    case ESP32_CAMERA_SIZE_2560X1600:
       ESP_LOGCONFIG(TAG, "  Resolution: 2560x1600 (WQXGA)");
       break;
-    case FRAMESIZE_P_FHD:
+    case ESP32_CAMERA_SIZE_1080X1920:
       ESP_LOGCONFIG(TAG, "  Resolution: 1080x1920 (P_FHD)");
       break;
-    case FRAMESIZE_QSXGA:
+    case ESP32_CAMERA_SIZE_2560X1920:
       ESP_LOGCONFIG(TAG, "  Resolution: 2560x1920 (QSXGA)");
       break;
-    default:
-      break;
   }
+
   if (this->is_failed()) {
     ESP_LOGE(TAG, "  Setup Failed: %s", esp_err_to_name(this->init_error_));
     return;
@@ -332,11 +327,7 @@ float ESP32Camera::get_setup_priority() const { return setup_priority::DATA; }
 
 /* ---------------- constructors ---------------- */
 ESP32Camera::ESP32Camera() {
-  this->config_.pixel_format = PIXFORMAT_JPEG;
-  this->config_.frame_size = FRAMESIZE_VGA;  // 640x480
-  this->config_.jpeg_quality = 10;
-  this->config_.fb_count = 1;
-
+  frame_size = ESP32_CAMERA_SIZE_640X480;
   global_esp32_camera = this;
 }
 
@@ -344,62 +335,7 @@ ESP32Camera::ESP32Camera() {
 
 /* set image parameters */
 void ESP32Camera::set_frame_size(ESP32CameraFrameSize size) {
-  switch (size) {
-    case ESP32_CAMERA_SIZE_160X120:
-      this->config_.frame_size = FRAMESIZE_QQVGA;
-      break;
-    case ESP32_CAMERA_SIZE_176X144:
-      this->config_.frame_size = FRAMESIZE_QCIF;
-      break;
-    case ESP32_CAMERA_SIZE_240X176:
-      this->config_.frame_size = FRAMESIZE_HQVGA;
-      break;
-    case ESP32_CAMERA_SIZE_320X240:
-      this->config_.frame_size = FRAMESIZE_QVGA;
-      break;
-    case ESP32_CAMERA_SIZE_400X296:
-      this->config_.frame_size = FRAMESIZE_CIF;
-      break;
-    case ESP32_CAMERA_SIZE_640X480:
-      this->config_.frame_size = FRAMESIZE_VGA;
-      break;
-    case ESP32_CAMERA_SIZE_800X600:
-      this->config_.frame_size = FRAMESIZE_SVGA;
-      break;
-    case ESP32_CAMERA_SIZE_1024X768:
-      this->config_.frame_size = FRAMESIZE_XGA;
-      break;
-    case ESP32_CAMERA_SIZE_1280X1024:
-      this->config_.frame_size = FRAMESIZE_SXGA;
-      break;
-    case ESP32_CAMERA_SIZE_1600X1200:
-      this->config_.frame_size = FRAMESIZE_UXGA;
-      break;
-    case ESP32_CAMERA_SIZE_1920X1080:
-      this->config_.frame_size = FRAMESIZE_FHD;
-      break;
-    case ESP32_CAMERA_SIZE_720X1280:
-      this->config_.frame_size = FRAMESIZE_P_HD;
-      break;
-    case ESP32_CAMERA_SIZE_864X1536:
-      this->config_.frame_size = FRAMESIZE_P_3MP;
-      break;
-    case ESP32_CAMERA_SIZE_2048X1536:
-      this->config_.frame_size = FRAMESIZE_QXGA;
-      break;
-    case ESP32_CAMERA_SIZE_2560X1440:
-      this->config_.frame_size = FRAMESIZE_QHD;
-      break;
-    case ESP32_CAMERA_SIZE_2560X1600:
-      this->config_.frame_size = FRAMESIZE_WQXGA;
-      break;
-    case ESP32_CAMERA_SIZE_1080X1920:
-      this->config_.frame_size = FRAMESIZE_P_FHD;
-      break;
-    case ESP32_CAMERA_SIZE_2560X1920:
-      this->config_.frame_size = FRAMESIZE_QSXGA;
-      break;
-  }
+  this->frame_size = size;
 }
 /* set fps */
 void ESP32Camera::set_max_update_interval(uint32_t max_update_interval) {

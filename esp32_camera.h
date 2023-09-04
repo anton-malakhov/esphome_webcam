@@ -9,7 +9,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 
-#if 0
+#if 1
 typedef enum {
     PIXFORMAT_RGB565,    // 2BPP/RGB565
     PIXFORMAT_YUV422,    // 2BPP/YUV422
@@ -30,6 +30,7 @@ typedef struct {
     struct timeval timestamp;   // Timestamp since boot of the first DMA buffer of the frame
 } camera_fb_t;
 #else
+// these definitions are taken from
 #include "esp_camera.h"
 #endif
 
@@ -60,39 +61,6 @@ enum ESP32CameraFrameSize {
   ESP32_CAMERA_SIZE_2560X1600,  // WQXGA
   ESP32_CAMERA_SIZE_1080X1920,  // PFHD
   ESP32_CAMERA_SIZE_2560X1920,  // QSXGA
-};
-
-enum ESP32AgcGainCeiling {
-  ESP32_GAINCEILING_2X = GAINCEILING_2X,
-  ESP32_GAINCEILING_4X = GAINCEILING_4X,
-  ESP32_GAINCEILING_8X = GAINCEILING_8X,
-  ESP32_GAINCEILING_16X = GAINCEILING_16X,
-  ESP32_GAINCEILING_32X = GAINCEILING_32X,
-  ESP32_GAINCEILING_64X = GAINCEILING_64X,
-  ESP32_GAINCEILING_128X = GAINCEILING_128X,
-};
-
-enum ESP32GainControlMode {
-  ESP32_GC_MODE_MANU = false,
-  ESP32_GC_MODE_AUTO = true,
-};
-
-enum ESP32WhiteBalanceMode {
-  ESP32_WB_MODE_AUTO = 0U,
-  ESP32_WB_MODE_SUNNY = 1U,
-  ESP32_WB_MODE_CLOUDY = 2U,
-  ESP32_WB_MODE_OFFICE = 3U,
-  ESP32_WB_MODE_HOME = 4U,
-};
-
-enum ESP32SpecialEffect {
-  ESP32_SPECIAL_EFFECT_NONE = 0U,
-  ESP32_SPECIAL_EFFECT_NEGATIVE = 1U,
-  ESP32_SPECIAL_EFFECT_GRAYSCALE = 2U,
-  ESP32_SPECIAL_EFFECT_RED_TINT = 3U,
-  ESP32_SPECIAL_EFFECT_GREEN_TINT = 4U,
-  ESP32_SPECIAL_EFFECT_BLUE_TINT = 5U,
-  ESP32_SPECIAL_EFFECT_SEPIA = 6U,
 };
 
 /* ---------------- CameraImage class ---------------- */
@@ -159,27 +127,7 @@ class ESP32Camera : public Component, public EntityBase {
 
   /* attributes */
   /* camera configuration */
-  camera_config_t config_{};
-  /* -- image */
-  bool vertical_flip_{true};
-  bool horizontal_mirror_{true};
-  int contrast_{0};
-  int brightness_{0};
-  int saturation_{0};
-  ESP32SpecialEffect special_effect_{ESP32_SPECIAL_EFFECT_NONE};
-  /* -- exposure */
-  ESP32GainControlMode aec_mode_{ESP32_GC_MODE_AUTO};
-  bool aec2_{false};
-  int ae_level_{0};
-  uint32_t aec_value_{300};
-  /* -- gains */
-  ESP32GainControlMode agc_mode_{ESP32_GC_MODE_AUTO};
-  uint8_t agc_value_{0};
-  ESP32AgcGainCeiling agc_gain_ceiling_{ESP32_GAINCEILING_2X};
-  /* -- white balance */
-  ESP32WhiteBalanceMode wb_mode_{ESP32_WB_MODE_AUTO};
-  /* -- Test */
-  bool test_pattern_{false};
+  ESP32CameraFrameSize frame_size;
   /* -- framerates */
   uint32_t max_update_interval_{1000};
   uint32_t idle_update_interval_{15000};
