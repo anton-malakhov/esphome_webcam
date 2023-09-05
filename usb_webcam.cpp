@@ -44,8 +44,8 @@ namespace esp32_camera {
 
 static void camera_frame_cb(uvc_frame_t *frame, void *ptr)
 {
-    ESP_LOGV(TAG, "uvc callback! frame_format = %d, seq = %u, width = %u, height = %u, length = %u, ptr = %d",
-             frame->frame_format, frame->sequence, frame->width, frame->height, frame->data_bytes, (int) ptr);
+    ESP_LOGD(TAG, "uvc frame format = %d, seq = %u, width = %u, height = %u, length = %u",
+             frame->frame_format, frame->sequence, frame->width, frame->height, frame->data_bytes);
     if (!(xEventGroupGetBits(s_evt_handle) & BIT0_FRAME_START)) {
         return;
     }
@@ -172,8 +172,10 @@ esp_err_t esp_camera_init(ESP32CameraFrameSize fs) {
   if (ret != ESP_OK) return ret;
   /* start usb streaming, UVC and UAC MIC will start streaming because SUSPEND_AFTER_START flags not set */
   ret = usb_streaming_start();
+  #if WAIT_FOR_USB_CONNECT
   if (ret != ESP_OK) return ret;
   ret = usb_streaming_connect_wait(portMAX_DELAY);
+  #endif
   return ret;
 }
 
