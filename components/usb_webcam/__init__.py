@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# This file is derrived from esp32_camera component of ESPHome
+
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
@@ -13,9 +16,9 @@ from esphome.components.esp32 import add_idf_sdkconfig_option
 from esphome.components.esp32 import add_idf_component
 from esphome.cpp_helpers import setup_entity
 
-DEPENDENCIES = ["esp32"]
+DEPENDENCIES = ["esp32", "esp32_camera"]
 
-AUTO_LOAD = ["psram"]
+AUTO_LOAD = ["esp32_camera"]
 
 esp32_camera_ns = cg.esphome_ns.namespace("esp32_camera")
 ESP32Camera = esp32_camera_ns.class_("ESP32Camera", cg.PollingComponent, cg.EntityBase)

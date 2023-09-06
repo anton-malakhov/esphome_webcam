@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// This file is derrived from original esp32_camera component from ESPHome
+// with modifications for usb_webcam component
+
 #pragma once
 
 #ifdef USE_ESP32
@@ -36,6 +40,11 @@ typedef struct {
 
 namespace esphome {
 namespace esp32_camera {
+class dummy : public Component {
+ public:
+  void setup() override { }
+  float get_setup_priority() const override { return setup_priority::BUS; }
+};
 
 class ESP32Camera;
 

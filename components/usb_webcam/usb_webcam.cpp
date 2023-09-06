@@ -1,6 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// This file is derrived from esp32_camera component of ESPHome and from usb_camera_mic_spk example by Espressif
+
 #ifdef USE_ESP32
 
-#include "esp32_camera.h"
+#include "../esp32_camera/esp32_camera.h"
 #include "usb_stream.h"
 
 #include "esphome/core/log.h"
