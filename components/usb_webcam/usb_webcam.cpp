@@ -13,32 +13,24 @@
 
 
 static const char *const TAG = "usb_webcam";
+#define UVC_XFER_BUFFER_SIZE (64 * 1024) // requires PSRAM
 
 #define BIT0_FRAME_START     (0x01 << 0)
-#define BIT1_NEW_FRAME_START (0x01 << 1)
-#define BIT2_NEW_FRAME_END   (0x01 << 2)
-#define BIT3_SPK_START       (0x01 << 3)
-#define BIT4_SPK_RESET       (0x01 << 4)
+#define BIT1_FRAME_DONE      (0x01 << 1)
 
 static EventGroupHandle_t s_evt_handle;
 
-#ifdef CONFIG_IDF_TARGET_ESP32S2
-#define UVC_XFER_BUFFER_SIZE (45 * 1024)
-#else
-#define UVC_XFER_BUFFER_SIZE (55 * 1024)
-#endif
 static camera_fb_t s_fb;
 
 camera_fb_t *esp_camera_fb_get()
 {
     xEventGroupSetBits(s_evt_handle, BIT0_FRAME_START);
-    xEventGroupWaitBits(s_evt_handle, BIT1_NEW_FRAME_START, true, true, portMAX_DELAY);
+    xEventGroupWaitBits(s_evt_handle, BIT1_FRAME_DONE, true, true, portMAX_DELAY);
     return &s_fb;
 }
 
 void esp_camera_fb_return(camera_fb_t *fb)
 {
-    xEventGroupSetBits(s_evt_handle, BIT2_NEW_FRAME_END);
     return;
 }
 
@@ -47,25 +39,22 @@ namespace esp32_camera {
 
 static void camera_frame_cb(uvc_frame_t *frame, void *ptr)
 {
-    ESP_LOGD(TAG, "uvc frame format = %d, seq = %u, width = %u, height = %u, length = %u",
-             frame->frame_format, frame->sequence, frame->width, frame->height, frame->data_bytes);
     if (!(xEventGroupGetBits(s_evt_handle) & BIT0_FRAME_START)) {
         return;
     }
+    ESP_LOGV(TAG, "uvc frame format = %d, seq = %u, width = %u, height = %u, length = %u",
+             frame->frame_format, frame->sequence, frame->width, frame->height, frame->data_bytes);
 
     switch (frame->frame_format) {
     case UVC_FRAME_FORMAT_MJPEG:
-        s_fb.buf = (uint8_t*)frame->data;
         s_fb.len = frame->data_bytes;
         s_fb.width = frame->width;
         s_fb.height = frame->height;
         s_fb.buf = (uint8_t*)frame->data;
         s_fb.format = PIXFORMAT_JPEG;
         s_fb.timestamp.tv_sec = frame->sequence;
-        xEventGroupSetBits(s_evt_handle, BIT1_NEW_FRAME_START);
-        ESP_LOGV(TAG, "send frame = %u", frame->sequence);
-        xEventGroupWaitBits(s_evt_handle, BIT2_NEW_FRAME_END, true, true, portMAX_DELAY);
-        ESP_LOGV(TAG, "send frame done = %u", frame->sequence);
+        memcpy(s_fb.buf, frame->data, s_fb.len);
+        xEventGroupSetBits(s_evt_handle, BIT1_FRAME_DONE);
         break;
     default:
         ESP_LOGW(TAG, "Format not supported");
@@ -104,7 +93,7 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
     }
 }
 
-esp_err_t esp_camera_init(ESP32CameraFrameSize fs) {
+esp_err_t esp_camera_init(ESP32CameraFrameSize fs, uint32_t fps) {
   memset(&s_fb, 0, sizeof(camera_fb_t));
   s_evt_handle = xEventGroupCreate();
   if (s_evt_handle == NULL) {
@@ -112,18 +101,18 @@ esp_err_t esp_camera_init(ESP32CameraFrameSize fs) {
       assert(0);
   }
   /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
-  uint8_t *xfer_buffer_a = (uint8_t *)malloc(UVC_XFER_BUFFER_SIZE);
-  assert(xfer_buffer_a != NULL);
-  uint8_t *xfer_buffer_b = (uint8_t *)malloc(UVC_XFER_BUFFER_SIZE);
-  assert(xfer_buffer_b != NULL);
-  /* malloc frame buffer for a jpeg frame*/
-  uint8_t *frame_buffer = (uint8_t *)malloc(UVC_XFER_BUFFER_SIZE);
-  assert(frame_buffer != NULL);
-
+  uint8_t *frame_buffer  = (uint8_t *)heap_caps_malloc_prefer(UVC_XFER_BUFFER_SIZE, 2, MALLOC_CAP_SPIRAM, 0);
+  uint8_t *xfer_buffer_a = (uint8_t *)heap_caps_malloc_prefer(UVC_XFER_BUFFER_SIZE, 2, MALLOC_CAP_SPIRAM, 0);
+  uint8_t *xfer_buffer_b = (uint8_t *)heap_caps_malloc_prefer(UVC_XFER_BUFFER_SIZE, 2, MALLOC_CAP_SPIRAM, 0);
+  s_fb.buf =               (uint8_t *)heap_caps_malloc_prefer(UVC_XFER_BUFFER_SIZE, 2, MALLOC_CAP_SPIRAM, 0);
+  if (!frame_buffer || !xfer_buffer_a || !xfer_buffer_b || !s_fb.buf) {
+      ESP_LOGE(TAG, "Not enough memory");
+      return ESP_ERR_NO_MEM;
+  }
   uvc_config_t uvc_config = {
       .frame_width = 0,
       .frame_height = 0,
-      .frame_interval = FPS2INTERVAL(15),
+      .frame_interval = FPS2INTERVAL(5), // fps will be here, but more than 5 is unstable anyway, also it cannot be arbitrary, only 5, 10, 15,...
       .xfer_buffer_size = UVC_XFER_BUFFER_SIZE,
       .xfer_buffer_a = xfer_buffer_a,
       .xfer_buffer_b = xfer_buffer_b,
@@ -191,7 +180,7 @@ void ESP32Camera::setup() {
   this->last_update_ = esp_timer_get_time();
 
   /* initialize camera */
-  esp_err_t err = esp_camera_init(this->frame_size);
+  esp_err_t err = esp_camera_init(this->frame_size, 1000/this->max_update_interval_); // mui=1000/fps. error starts with 60 fps but it is unrealistic already
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "esp_camera_init failed: %s", esp_err_to_name(err));
     this->init_error_ = err;
@@ -205,13 +194,12 @@ void ESP32Camera::setup() {
   /* initialize RTOS */
   this->framebuffer_get_queue_ = xQueueCreate(1, sizeof(camera_fb_t *));
   this->framebuffer_return_queue_ = xQueueCreate(1, sizeof(camera_fb_t *));
-  xTaskCreatePinnedToCore(&ESP32Camera::framebuffer_task,
+  xTaskCreate(&ESP32Camera::framebuffer_task,
                           "framebuffer_task",  // name
                           1024,                // stack size
                           nullptr,             // task pv params
                           0,                   // priority
-                          nullptr,             // handle
-                          1                    // core
+                          nullptr              // handle
   );
 }
 
@@ -291,7 +279,7 @@ void ESP32Camera::loop() {
   }
 
   // request idle image every idle_update_interval
-  const uint64_t now = esp_timer_get_time();
+  const uint64_t now = esp_timer_get_time() / 1000;
   if (this->idle_update_interval_ != 0 && now - this->last_idle_request_ > this->idle_update_interval_) {
     this->last_idle_request_ = now;
     this->request_image(IDLE);
@@ -322,7 +310,7 @@ void ESP32Camera::loop() {
   }
   this->current_image_ = std::make_shared<CameraImage>(fb, this->single_requesters_ | this->stream_requesters_);
 
-  ESP_LOGV(TAG, "Got Image: len=%u", fb->len);
+  ESP_LOGD(TAG, "Got Image %u: %ux%u %uB", (unsigned int)fb->timestamp.tv_sec, fb->width, fb->height, fb->len);
   this->new_image_callback_.call(this->current_image_);
   this->last_update_ = now;
   this->single_requesters_ = 0;
@@ -381,7 +369,6 @@ void ESP32Camera::framebuffer_task(void *pv) {
   while (true) {
     camera_fb_t *framebuffer = esp_camera_fb_get();
     xQueueSend(global_esp32_camera->framebuffer_get_queue_, &framebuffer, portMAX_DELAY);
-    // return is no-op for config with 1 fb
     xQueueReceive(global_esp32_camera->framebuffer_return_queue_, &framebuffer, portMAX_DELAY);
     esp_camera_fb_return(framebuffer);
   }

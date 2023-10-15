@@ -9,6 +9,14 @@ Not every USB video device can work with ESP devices due to their limited capabi
 ## Power supply
 ESP32-S3 DevKitC-1 or similar boards do not provide enough power for USB devices. It must be provided externally or via your own schematics.
 
+## Memory, PSRAM
+usb_stream requires a lot of video buffers. Current setting is 256K just for transfer buffers. Thus, the ESP32-S2/S3 device has to have PSRAM connected and enabled, e.g.:
+```yaml
+psram:
+  mode: quad
+  speed: 80MHz
+```
+
 ## ESP-IDF framework mode
 The webcam component uses `usb_stream` component of [esp-iot-solution](https://github.com/espressif/esp-iot-solution/) library, which is based on ESP-IDF framework. The following yaml enables `esp-idf` mode for ESP32-S3 DevKitC-1 board along with correct flash mode:
 ```yaml
@@ -46,6 +54,10 @@ esp32:
   board: esp32-s3-devkitc-1
   framework:
     type: esp-idf
+
+psram:
+  mode: quad
+  speed: 80MHz
 
 external_components:
   - source: github://anton-malakhov/esphome_webcam

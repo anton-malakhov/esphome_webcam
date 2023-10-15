@@ -88,7 +88,7 @@ CONFIG_SCHEMA = cv.ENTITY_BASE_SCHEMA.extend(
             FRAME_SIZES, upper=True
         ),
         # framerates
-        cv.Optional(CONF_MAX_FRAMERATE, default="10 fps"): cv.All(
+        cv.Optional(CONF_MAX_FRAMERATE, default="5 fps"): cv.All(
             cv.framerate, cv.Range(min=0, min_included=False, max=60)
         ),
         cv.Optional(CONF_IDLE_FRAMERATE, default="0.1 fps"): cv.All(
@@ -139,15 +139,17 @@ async def to_code(config):
         "CONFIG_RTCIO_SUPPORT_RTC_GPIO_DESC": True,
         "CONFIG_USB_OTG_SUPPORTED": True,
         "CONFIG_SOC_USB_OTG_SUPPORTED": True,
+        "CONFIG_SPIRAM_USE_MALLOC": True, # buffers are big, better let everyone allocate PSRAM
         #
         # USB Stream
         #
+        #"CONFIG_USB_STREAM_QUICK_START": True,
         "CONFIG_UVC_GET_DEVICE_DESC": True,
         "CONFIG_UVC_GET_CONFIG_DESC": True,
         "CONFIG_UVC_PRINT_DESC": True,
         "CONFIG_USB_PRE_ALLOC_CTRL_TRANSFER_URB": True,
-        "CONFIG_USB_PROC_TASK_PRIORITY": 5,
-        "CONFIG_USB_PROC_TASK_CORE": 1,
+        #"CONFIG_USB_PROC_TASK_PRIORITY": 5,
+        #"CONFIG_USB_PROC_TASK_CORE": 1,
         "CONFIG_USB_PROC_TASK_STACK_SIZE": 3072,
         "CONFIG_USB_WAITING_AFTER_CONN_MS": 50,
         "CONFIG_USB_ENUM_FAILED_RETRY": True,
@@ -156,8 +158,8 @@ async def to_code(config):
         #
         # UVC Stream Config
         #
-        "CONFIG_SAMPLE_PROC_TASK_PRIORITY": 2,
-        "CONFIG_SAMPLE_PROC_TASK_CORE": 0,
+        #"CONFIG_SAMPLE_PROC_TASK_PRIORITY": 2,
+        #"CONFIG_SAMPLE_PROC_TASK_CORE": 0,
         "CONFIG_SAMPLE_PROC_TASK_STACK_SIZE": 3072,
         "CONFIG_UVC_PRINT_PROBE_RESULT": True,
         "CONFIG_UVC_CHECK_BULK_JPEG_HEADER": True,
@@ -166,7 +168,7 @@ async def to_code(config):
         "CONFIG_NUM_BULK_BYTES_PER_URB": 2048,
         "CONFIG_NUM_ISOC_UVC_URBS": 3,
         "CONFIG_NUM_PACKETS_PER_URB": 4,
-        # end of UVC Stream Config        
+        # end of UVC Stream Config
     }.items():
         add_idf_sdkconfig_option(d, v)
 
