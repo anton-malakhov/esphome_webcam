@@ -11,7 +11,7 @@ from esphome.const import (
     CONF_RESOLUTION,
     CONF_TRIGGER_ID,
 )
-from esphome.core import CORE
+from esphome.core import CORE, TimePeriod
 from esphome.components.esp32 import add_idf_sdkconfig_option
 from esphome.components.esp32 import add_idf_component
 from esphome.cpp_helpers import setup_entity
@@ -131,6 +131,7 @@ async def to_code(config):
             name="usb_stream",
             repo="https://github.com/espressif/esp-iot-solution.git",
             path="components/usb/usb_stream",
+            refresh=TimePeriod(days=5)
     )
     # no need in cg.add_library("espressif/esp32-camera", "1.0.0")
     # esp_camera.h and sensor.h are taken from it directly
@@ -148,7 +149,7 @@ async def to_code(config):
         "CONFIG_UVC_GET_CONFIG_DESC": True,
         "CONFIG_UVC_PRINT_DESC": True,
         "CONFIG_USB_PRE_ALLOC_CTRL_TRANSFER_URB": True,
-        #"CONFIG_USB_PROC_TASK_PRIORITY": 5,
+        "CONFIG_USB_PROC_TASK_PRIORITY": 2,
         #"CONFIG_USB_PROC_TASK_CORE": 1,
         "CONFIG_USB_PROC_TASK_STACK_SIZE": 3072,
         "CONFIG_USB_WAITING_AFTER_CONN_MS": 50,
@@ -158,12 +159,13 @@ async def to_code(config):
         #
         # UVC Stream Config
         #
-        #"CONFIG_SAMPLE_PROC_TASK_PRIORITY": 2,
+        "CONFIG_SAMPLE_PROC_TASK_PRIORITY": 0,
         #"CONFIG_SAMPLE_PROC_TASK_CORE": 0,
         "CONFIG_SAMPLE_PROC_TASK_STACK_SIZE": 3072,
         "CONFIG_UVC_PRINT_PROBE_RESULT": True,
         "CONFIG_UVC_CHECK_BULK_JPEG_HEADER": True,
         "CONFIG_UVC_DROP_OVERFLOW_FRAME": True,
+        "CONFIG_UVC_DROP_NO_EOF_FRAME": True,
         "CONFIG_NUM_BULK_STREAM_URBS": 2,
         "CONFIG_NUM_BULK_BYTES_PER_URB": 2048,
         "CONFIG_NUM_ISOC_UVC_URBS": 3,

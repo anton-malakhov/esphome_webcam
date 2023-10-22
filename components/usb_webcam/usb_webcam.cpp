@@ -13,10 +13,11 @@
 
 
 static const char *const TAG = "usb_webcam";
-#define UVC_XFER_BUFFER_SIZE (64 * 1024) // requires PSRAM
+#define UVC_XFER_BUFFER_SIZE (46 * 1024) // requires PSRAM
 
 #define BIT0_FRAME_START     (0x01 << 0)
-#define BIT1_FRAME_DONE      (0x01 << 1)
+#define BIT1_NEW_FRAME_START (0x01 << 1)
+#define BIT2_NEW_FRAME_END   (0x01 << 2)
 
 static EventGroupHandle_t s_evt_handle;
 
@@ -25,12 +26,13 @@ static camera_fb_t s_fb;
 camera_fb_t *esp_camera_fb_get()
 {
     xEventGroupSetBits(s_evt_handle, BIT0_FRAME_START);
-    xEventGroupWaitBits(s_evt_handle, BIT1_FRAME_DONE, true, true, portMAX_DELAY);
+    xEventGroupWaitBits(s_evt_handle, BIT1_NEW_FRAME_START, true, true, portMAX_DELAY);
     return &s_fb;
 }
 
 void esp_camera_fb_return(camera_fb_t *fb)
 {
+    xEventGroupSetBits(s_evt_handle, BIT2_NEW_FRAME_END);
     return;
 }
 
@@ -47,14 +49,16 @@ static void camera_frame_cb(uvc_frame_t *frame, void *ptr)
 
     switch (frame->frame_format) {
     case UVC_FRAME_FORMAT_MJPEG:
+        s_fb.buf = (uint8_t*)frame->data;
         s_fb.len = frame->data_bytes;
         s_fb.width = frame->width;
         s_fb.height = frame->height;
-        s_fb.buf = (uint8_t*)frame->data;
         s_fb.format = PIXFORMAT_JPEG;
         s_fb.timestamp.tv_sec = frame->sequence;
-        memcpy(s_fb.buf, frame->data, s_fb.len);
-        xEventGroupSetBits(s_evt_handle, BIT1_FRAME_DONE);
+        xEventGroupSetBits(s_evt_handle, BIT1_NEW_FRAME_START);
+        ESP_LOGV(TAG, "send frame = %u", frame->sequence);
+        xEventGroupWaitBits(s_evt_handle, BIT2_NEW_FRAME_END, true, true, portMAX_DELAY);
+        ESP_LOGV(TAG, "send frame done = %u", frame->sequence);
         break;
     default:
         ESP_LOGW(TAG, "Format not supported");
@@ -101,11 +105,10 @@ esp_err_t esp_camera_init(ESP32CameraFrameSize fs, uint32_t fps) {
       assert(0);
   }
   /* malloc double buffer for usb payload, xfer_buffer_size >= frame_buffer_size*/
-  uint8_t *frame_buffer  = (uint8_t *)heap_caps_malloc_prefer(UVC_XFER_BUFFER_SIZE, 2, MALLOC_CAP_SPIRAM, 0);
   uint8_t *xfer_buffer_a = (uint8_t *)heap_caps_malloc_prefer(UVC_XFER_BUFFER_SIZE, 2, MALLOC_CAP_SPIRAM, 0);
   uint8_t *xfer_buffer_b = (uint8_t *)heap_caps_malloc_prefer(UVC_XFER_BUFFER_SIZE, 2, MALLOC_CAP_SPIRAM, 0);
-  s_fb.buf =               (uint8_t *)heap_caps_malloc_prefer(UVC_XFER_BUFFER_SIZE, 2, MALLOC_CAP_SPIRAM, 0);
-  if (!frame_buffer || !xfer_buffer_a || !xfer_buffer_b || !s_fb.buf) {
+  uint8_t *frame_buffer  = (uint8_t *)heap_caps_malloc_prefer(UVC_XFER_BUFFER_SIZE, 2, MALLOC_CAP_SPIRAM, 0);
+  if (!frame_buffer || !xfer_buffer_a || !xfer_buffer_b) {
       ESP_LOGE(TAG, "Not enough memory");
       return ESP_ERR_NO_MEM;
   }
@@ -196,9 +199,9 @@ void ESP32Camera::setup() {
   this->framebuffer_return_queue_ = xQueueCreate(1, sizeof(camera_fb_t *));
   xTaskCreate(&ESP32Camera::framebuffer_task,
                           "framebuffer_task",  // name
-                          1024,                // stack size
+                          512,                 // stack size
                           nullptr,             // task pv params
-                          0,                   // priority
+                          2,                   // priority
                           nullptr              // handle
   );
 }
