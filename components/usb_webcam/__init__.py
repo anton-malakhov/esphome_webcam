@@ -70,15 +70,14 @@ FRAME_SIZES = {
     "QSXGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_2560X1920,
 }
 
-# framerates
+# frames
 CONF_MAX_FRAMERATE = "max_framerate"
 CONF_IDLE_FRAMERATE = "idle_framerate"
+CONF_DROP_FRAME_SIZE = "drop_frame_size"
 
 # stream trigger
 CONF_ON_STREAM_START = "on_stream_start"
 CONF_ON_STREAM_STOP = "on_stream_stop"
-
-camera_range_param = cv.int_range(min=-2, max=2)
 
 CONFIG_SCHEMA = cv.ENTITY_BASE_SCHEMA.extend(
     {
@@ -93,6 +92,9 @@ CONFIG_SCHEMA = cv.ENTITY_BASE_SCHEMA.extend(
         ),
         cv.Optional(CONF_IDLE_FRAMERATE, default="0.1 fps"): cv.All(
             cv.framerate, cv.Range(min=0, max=1)
+        ),
+        cv.Optional(CONF_DROP_FRAME_SIZE, default="7000"): cv.All(
+            cv.int_range(min=0, max=100000)
         ),
         cv.Optional(CONF_ON_STREAM_START): automation.validate_automation(
             {
@@ -122,6 +124,7 @@ async def to_code(config):
         cg.add(var.set_idle_update_interval(0))
     else:
         cg.add(var.set_idle_update_interval(1000 / config[CONF_IDLE_FRAMERATE]))
+    cg.add(var.set_drop_size(config[CONF_DROP_FRAME_SIZE]))
     cg.add(var.set_frame_size(config[CONF_RESOLUTION]))
 
     cg.add_define("USE_ESP32_CAMERA")

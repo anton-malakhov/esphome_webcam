@@ -20,7 +20,7 @@ static const char *const TAG = "usb_webcam";
 #define BIT2_NEW_FRAME_END   (0x01 << 2)
 
 static EventGroupHandle_t s_evt_handle;
-
+static uint32_t s_drop_frame_size = 0;
 static camera_fb_t s_fb;
 
 camera_fb_t *esp_camera_fb_get()
@@ -46,6 +46,11 @@ static void camera_frame_cb(uvc_frame_t *frame, void *ptr)
     }
     ESP_LOGV(TAG, "uvc frame format = %d, seq = %u, width = %u, height = %u, length = %u",
              frame->frame_format, frame->sequence, frame->width, frame->height, frame->data_bytes);
+
+    if(frame->data_bytes < s_drop_frame_size) {
+      ESP_LOGV(TAG, "Dropping frame size %u < %u", frame->data_bytes, s_drop_frame_size);
+      return;
+    }
 
     switch (frame->frame_format) {
     case UVC_FRAME_FORMAT_MJPEG:
@@ -264,7 +269,10 @@ void ESP32Camera::dump_config() {
     case ESP32_CAMERA_SIZE_2560X1920:
       ESP_LOGCONFIG(TAG, "  Resolution: 2560x1920 (QSXGA)");
       break;
-  }
+  };
+  ESP_LOGCONFIG(TAG, "  Update interval: %u", this->max_update_interval_);
+  ESP_LOGCONFIG(TAG, "  Idle interval: %u", this->idle_update_interval_);
+  ESP_LOGCONFIG(TAG, "  Drop frame size: %u", s_drop_frame_size);
 
   if (this->is_failed()) {
     ESP_LOGE(TAG, "  Setup Failed: %s", esp_err_to_name(this->init_error_));
@@ -332,6 +340,9 @@ ESP32Camera::ESP32Camera() {
 /* set image parameters */
 void ESP32Camera::set_frame_size(ESP32CameraFrameSize size) {
   this->frame_size = size;
+}
+void ESP32Camera::set_drop_size(uint32_t drop_size) {
+  s_drop_frame_size = drop_size;
 }
 /* set fps */
 void ESP32Camera::set_max_update_interval(uint32_t max_update_interval) {

@@ -108,6 +108,7 @@ class ESP32Camera : public Component, public EntityBase {
   /* setters */
   /* -- image */
   void set_frame_size(ESP32CameraFrameSize size);
+  void set_drop_size(uint32_t drop_size);
   /* -- framerates */
   void set_max_update_interval(uint32_t max_update_interval);
   void set_idle_update_interval(uint32_t idle_update_interval);
