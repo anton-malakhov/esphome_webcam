@@ -5,6 +5,9 @@
 
 #include "../esp32_camera/esp32_camera.h"
 #include "usb_stream.h"
+#ifdef CONFIG_ESP32_S3_USB_OTG
+#include "bsp/esp-bsp.h"
+#endif
 
 #include "esphome/core/log.h"
 
@@ -103,6 +106,10 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
 }
 
 esp_err_t esp_camera_init(ESP32CameraFrameSize fs, uint32_t fps) {
+#ifdef CONFIG_ESP32_S3_USB_OTG
+  bsp_usb_mode_select_host();
+  bsp_usb_host_power_mode(BSP_USB_HOST_POWER_MODE_USB_DEV, true);
+#endif  
   memset(&s_fb, 0, sizeof(camera_fb_t));
   s_evt_handle = xEventGroupCreate();
   if (s_evt_handle == NULL) {
@@ -203,8 +210,8 @@ void ESP32Camera::setup() {
   this->framebuffer_get_queue_ = xQueueCreate(1, sizeof(camera_fb_t *));
   this->framebuffer_return_queue_ = xQueueCreate(1, sizeof(camera_fb_t *));
   xTaskCreate(&ESP32Camera::framebuffer_task,
-                          "framebuffer_task",  // name
-                          512,                 // stack size
+                          "framebuffer_tsk",   // name
+                          1024,                // stack size
                           nullptr,             // task pv params
                           2,                   // priority
                           nullptr              // handle

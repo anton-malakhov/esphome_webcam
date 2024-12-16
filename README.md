@@ -4,7 +4,7 @@
 This repository contains [external components](https://esphome.io/components/external_components.html) for [ESPHome](https://esphome.io/) that enable web camera connected via USB OTG port of ESP32 S2/S3 family of microcontrollers.
 
 ## Supported video devices
-Not every USB video device can work with ESP devices due to their limited capabilities. E.g. only USB1.1 full-speed mode and MJPEG format are supported along with limitations on max bandwidth and max packet size (as requested by the video device). Please refer to the [documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_stream.html#usb-stream-user-guide) for details.
+Not every USB video device can work with ESP devices due to their limited capabilities. E.g. only USB1.1 full-speed mode and MJPEG format are supported along with limitations on max bandwidth and max packet size (as requested by the video device). Please refer to the [documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/usb_stream.html#usb-stream-user-guide) for details.
 
 ## Power supply
 ESP32-S3 DevKitC-1 or similar boards do not provide enough power for USB devices. It must be provided externally or via your own schematics.
@@ -41,6 +41,17 @@ external_components:
 ```yaml
 usb_webcam:
   name: usb-webcam
+```
+
+## Configuration
+The following parameters change behavior of the component:
+```yaml
+usb_webcam:
+  drop_frame_size: 15000
+  # same as esp32_camera parameters:
+  idle_framerate: 0.1 fps
+  on_stream_start: # trigger
+  on_stream_stop:  # trigger
 ```
 
 ## Full example YAML
