@@ -68,6 +68,7 @@ FRAME_SIZES = {
     "PFHD": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1080X1920,
     "2560X1920": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_2560X1920,
     "QSXGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_2560X1920,
+    "any": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_ANY,
 }
 
 # frames
@@ -83,11 +84,11 @@ CONFIG_SCHEMA = cv.ENTITY_BASE_SCHEMA.extend(
     {
         cv.GenerateID(): cv.declare_id(ESP32Camera),
         # image
-        cv.Optional(CONF_RESOLUTION, default="640X480"): cv.enum(
+        cv.Optional(CONF_RESOLUTION, default="any"): cv.enum(
             FRAME_SIZES, upper=True
         ),
         # framerates
-        cv.Optional(CONF_MAX_FRAMERATE, default="5 fps"): cv.All(
+        cv.Optional(CONF_MAX_FRAMERATE, default="15 fps"): cv.All(
             cv.framerate, cv.Range(min=0, min_included=False, max=60)
         ),
         cv.Optional(CONF_IDLE_FRAMERATE, default="0.1 fps"): cv.All(
