@@ -12,6 +12,7 @@
 
 #include "esphome/core/log.h"
 
+#include <esp_timer.h>
 #include <freertos/event_groups.h>
 #include <freertos/task.h>
 
@@ -146,14 +147,15 @@ esp_err_t esp_camera_init(ESP32CameraFrameSize fs, uint32_t fps) {
       .frame_buffer = frame_buffer,
       .frame_cb = &camera_frame_cb,
       .frame_cb_arg = NULL,
-      .xfer_type = UVC_XFER_ISOC,
-      .format_index = 0,
-      .frame_index = 0,
-      .interface = 1,
-      .interface_alt = 1,
-      .ep_addr = 0x83,
-      .ep_mps = 512,
-      .flags = 0};
+      .xfer_type = UVC_XFER_BULK,
+      // .format_index = 0,
+      // .frame_index = 0,
+      // .interface = 1,
+      // .interface_alt = 1,
+      // .ep_addr = 0x83,
+      // .ep_mps = 512,
+      // .flags = 0
+  };
 
   switch (fs) {
   case ESP32_CAMERA_SIZE_160X120:
@@ -172,12 +174,20 @@ esp_err_t esp_camera_init(ESP32CameraFrameSize fs, uint32_t fps) {
     uvc_config.frame_width = 320;
     uvc_config.frame_height = 240;
     break;
+  case ESP32_CAMERA_SIZE_480X320:
+    uvc_config.frame_width = 480;
+    uvc_config.frame_height = 320;
+    break;
   case ESP32_CAMERA_SIZE_400X296:
     uvc_config.frame_width = 400;
     uvc_config.frame_height = 296;
     break;
   case ESP32_CAMERA_SIZE_640X480:
     uvc_config.frame_width = 640;
+    uvc_config.frame_height = 480;
+    break;
+  case ESP32_CAMERA_SIZE_800X480:
+    uvc_config.frame_width = 800;
     uvc_config.frame_height = 480;
     break;
   case ESP32_CAMERA_SIZE_800X600:

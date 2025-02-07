@@ -40,6 +40,10 @@ FRAME_SIZES = {
     "HQVGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_240X176,
     "320X240": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_320X240,
     "QVGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_320X240,
+    "480X320": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_480X320,
+    "HVGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_480X320,
+    "800X480": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_800X480,
+    "WVGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_800X480,
     "400X296": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_400X296,
     "CIF": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_400X296,
     "640X480": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_640X480,
@@ -84,9 +88,7 @@ CONFIG_SCHEMA = cv.ENTITY_BASE_SCHEMA.extend(
     {
         cv.GenerateID(): cv.declare_id(ESP32Camera),
         # image
-        cv.Optional(CONF_RESOLUTION, default="ANY"): cv.enum(
-            FRAME_SIZES, upper=True
-        ),
+        cv.Optional(CONF_RESOLUTION, default="ANY"): cv.enum(FRAME_SIZES, upper=True),
         # framerates
         cv.Optional(CONF_MAX_FRAMERATE, default="15 fps"): cv.All(
             cv.framerate, cv.Range(min=0, min_included=False, max=60)
@@ -130,31 +132,31 @@ async def to_code(config):
 
     cg.add_define("USE_ESP32_CAMERA")
 
-    assert(CORE.using_esp_idf)
+    assert CORE.using_esp_idf
     add_idf_component(
-            name="usb_stream",
-            repo="https://github.com/espressif/esp-iot-solution.git",
-            path="components/usb/usb_stream",
-            refresh=TimePeriod(days=5)
+        name="usb_stream",
+        repo="https://github.com/espressif/esp-iot-solution.git",
+        path="components/usb/usb_stream",
+        refresh=TimePeriod(days=5),
     )
     # no need in cg.add_library("espressif/esp32-camera", "1.0.0")
     # esp_camera.h and sensor.h are taken from it directly
     for d, v in {
-        #"CONFIG_ESP_SYSTEM_PANIC_PRINT_HALT": True,
+        # "CONFIG_ESP_SYSTEM_PANIC_PRINT_HALT": True,
         "CONFIG_RTCIO_SUPPORT_RTC_GPIO_DESC": True,
         "CONFIG_USB_OTG_SUPPORTED": True,
         "CONFIG_SOC_USB_OTG_SUPPORTED": True,
-        "CONFIG_SPIRAM_USE_MALLOC": True, # buffers are big, better let everyone allocate PSRAM
+        "CONFIG_SPIRAM_USE_MALLOC": True,  # buffers are big, better let everyone allocate PSRAM
         #
         # USB Stream
         #
-        #"CONFIG_USB_STREAM_QUICK_START": True,
+        # "CONFIG_USB_STREAM_QUICK_START": True,
         "CONFIG_UVC_GET_DEVICE_DESC": True,
         "CONFIG_UVC_GET_CONFIG_DESC": True,
         "CONFIG_UVC_PRINT_DESC": True,
-        "CONFIG_USB_PRE_ALLOC_CTRL_TRANSFER_URB": True,
+        # "CONFIG_USB_PRE_ALLOC_CTRL_TRANSFER_URB": True,
         "CONFIG_USB_PROC_TASK_PRIORITY": 2,
-        #"CONFIG_USB_PROC_TASK_CORE": 1,
+        # "CONFIG_USB_PROC_TASK_CORE": 1,
         "CONFIG_USB_PROC_TASK_STACK_SIZE": 3072,
         "CONFIG_USB_WAITING_AFTER_CONN_MS": 50,
         "CONFIG_USB_ENUM_FAILED_RETRY": True,
@@ -164,16 +166,16 @@ async def to_code(config):
         # UVC Stream Config
         #
         "CONFIG_SAMPLE_PROC_TASK_PRIORITY": 0,
-        #"CONFIG_SAMPLE_PROC_TASK_CORE": 0,
+        # "CONFIG_SAMPLE_PROC_TASK_CORE": 0,
         "CONFIG_SAMPLE_PROC_TASK_STACK_SIZE": 3072,
         "CONFIG_UVC_PRINT_PROBE_RESULT": True,
         "CONFIG_UVC_CHECK_BULK_JPEG_HEADER": True,
         "CONFIG_UVC_DROP_OVERFLOW_FRAME": True,
         "CONFIG_UVC_DROP_NO_EOF_FRAME": True,
         "CONFIG_NUM_BULK_STREAM_URBS": 2,
-        "CONFIG_NUM_BULK_BYTES_PER_URB": 2048,
+        "CONFIG_NUM_BULK_BYTES_PER_URB": 35840,
         "CONFIG_NUM_ISOC_UVC_URBS": 3,
-        "CONFIG_NUM_PACKETS_PER_URB": 4,
+        "CONFIG_NUM_PACKETS_PER_URB": 300,
         # end of UVC Stream Config
     }.items():
         add_idf_sdkconfig_option(d, v)
