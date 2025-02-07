@@ -6,6 +6,7 @@
 
 #include "../esp32_camera/esp32_camera.h"
 #include "usb_stream.h"
+#include "esp_timer.h"
 #ifdef CONFIG_ESP32_S3_USB_OTG
 #include "bsp/esp-bsp.h"
 #endif
