@@ -323,8 +323,14 @@ void ESP32Camera::dump_config() {
   case ESP32_CAMERA_SIZE_400X296:
     ESP_LOGCONFIG(TAG, "  Resolution: 400x296 (CIF)");
     break;
+  case ESP32_CAMERA_SIZE_480X320:
+    ESP_LOGCONFIG(TAG, "  Resolution: 480x320 (HVGA)");
+    break;
   case ESP32_CAMERA_SIZE_640X480:
     ESP_LOGCONFIG(TAG, "  Resolution: 640x480 (VGA)");
+    break;
+  case ESP32_CAMERA_SIZE_800X480:
+    ESP_LOGCONFIG(TAG, "  Resolution: 800x480 (WVGA)");
     break;
   case ESP32_CAMERA_SIZE_800X600:
     ESP_LOGCONFIG(TAG, "  Resolution: 800x600 (SVGA)");
