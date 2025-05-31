@@ -52,6 +52,8 @@ FRAME_SIZES = {
     "SVGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_800X600,
     "1024X768": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1024X768,
     "XGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1024X768,
+    "1280X720": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1280X720,
+    "HD": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1280X720,
     "1280X1024": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1280X1024,
     "SXGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1280X1024,
     "1600X1200": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1600X1200,
@@ -135,7 +137,7 @@ async def to_code(config):
     assert CORE.using_esp_idf
     add_idf_component(
         name="usb_stream",
-        repo="https://github.com/espressif/esp-iot-solution.git",
+        repo="https://github.com/ffalsk/esp-iot-solution.git",
         path="components/usb/usb_stream",
         refresh=TimePeriod(days=5),
     )
@@ -167,16 +169,17 @@ async def to_code(config):
         #
         "CONFIG_SAMPLE_PROC_TASK_PRIORITY": 0,
         # "CONFIG_SAMPLE_PROC_TASK_CORE": 0,
-        "CONFIG_UVC_CHECK_HEADER_EOF": False,
+        "CONFIG_UVC_CHECK_HEADER_EOH": True,
+        "CONFIG_UVC_CHECK_HEADER_EOF": True,
         "CONFIG_SAMPLE_PROC_TASK_STACK_SIZE": 3072,
         "CONFIG_UVC_PRINT_PROBE_RESULT": True,
         "CONFIG_UVC_CHECK_BULK_JPEG_HEADER": True,
-        "CONFIG_UVC_DROP_OVERFLOW_FRAME": True,
-        "CONFIG_UVC_DROP_NO_EOF_FRAME": True,
-        "CONFIG_NUM_BULK_STREAM_URBS": 2,
-        "CONFIG_NUM_BULK_BYTES_PER_URB": 2048,
+        "CONFIG_UVC_DROP_OVERFLOW_FRAME": False,
+        "CONFIG_UVC_DROP_NO_EOF_FRAME": False,
+        "CONFIG_NUM_BULK_STREAM_URBS": 3,
+        "CONFIG_NUM_BULK_BYTES_PER_URB": 6144,
         "CONFIG_NUM_ISOC_UVC_URBS": 3,
-        "CONFIG_NUM_PACKETS_PER_URB": 300,
+        "CONFIG_NUM_PACKETS_PER_URB": 4,
         # end of UVC Stream Config
     }.items():
         add_idf_sdkconfig_option(d, v)

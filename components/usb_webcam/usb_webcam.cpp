@@ -5,8 +5,9 @@
 #ifdef USE_ESP32
 
 #include "../esp32_camera/esp32_camera.h"
-#include "usb_stream.h"
 #include "esp_timer.h"
+#include "usb_stream.h"
+
 #ifdef CONFIG_ESP32_S3_USB_OTG
 #include "bsp/esp-bsp.h"
 #endif
@@ -18,7 +19,7 @@
 #include <freertos/task.h>
 
 static const char *const TAG = "usb_webcam";
-#define UVC_XFER_BUFFER_SIZE (46 * 1024) // requires PSRAM
+#define UVC_XFER_BUFFER_SIZE (150 * 1024) // requires PSRAM
 
 #define BIT0_FRAME_START (0x01 << 0)
 #define BIT1_NEW_FRAME_START (0x01 << 1)
@@ -199,6 +200,10 @@ esp_err_t esp_camera_init(ESP32CameraFrameSize fs, uint32_t fps) {
     uvc_config.frame_width = 1024;
     uvc_config.frame_height = 768;
     break;
+  case ESP32_CAMERA_SIZE_1280X720:
+    uvc_config.frame_width = 1280;
+    uvc_config.frame_height = 720;
+    break;
   case ESP32_CAMERA_SIZE_1280X1024:
     uvc_config.frame_width = 1280;
     uvc_config.frame_height = 1024;
@@ -337,6 +342,9 @@ void ESP32Camera::dump_config() {
     break;
   case ESP32_CAMERA_SIZE_1024X768:
     ESP_LOGCONFIG(TAG, "  Resolution: 1024x768 (XGA)");
+    break;
+  case ESP32_CAMERA_SIZE_1280X720:
+    ESP_LOGCONFIG(TAG, "  Resolution: 1280x720 (HD)");
     break;
   case ESP32_CAMERA_SIZE_1280X1024:
     ESP_LOGCONFIG(TAG, "  Resolution: 1280x1024 (SXGA)");
