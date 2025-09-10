@@ -14,7 +14,10 @@ from esphome.const import (
 from esphome.core import CORE, TimePeriod
 from esphome.components.esp32 import add_idf_sdkconfig_option
 from esphome.components.esp32 import add_idf_component
-from esphome.cpp_helpers import setup_entity
+try:
+  from esphome.cpp_helpers import setup_entity
+except:
+  from esphome.core.entity_helpers import setup_entity
 
 DEPENDENCIES = ["esp32", "esp32_camera"]
 
@@ -113,10 +116,14 @@ CONFIG_SCHEMA = cv.ENTITY_BASE_SCHEMA.extend(
     }
 ).extend(cv.COMPONENT_SCHEMA)
 
+def _final_validate(config):
+    return
+
+FINAL_VALIDATE_SCHEMA = _final_validate
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
-    await setup_entity(var, config)
+    await setup_entity(var, config, "camera")
     await cg.register_component(var, config)
 
     cg.add(var.set_max_update_interval(1000 / config[CONF_MAX_FRAMERATE]))
