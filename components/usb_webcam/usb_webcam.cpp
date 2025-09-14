@@ -3,7 +3,8 @@
 
 #ifdef USE_ESP32
 
-#include "../esp32_camera/esp32_camera.h"
+#include "usb_webcam.h"
+#include "esphome/components/camera/camera.h"
 #include "usb_stream.h"
 #include "esp_timer.h"
 #ifdef CONFIG_ESP32_S3_USB_OTG
@@ -23,6 +24,8 @@ static const char *const TAG = "usb_webcam";
 #define BIT1_NEW_FRAME_START (0x01 << 1)
 #define BIT2_NEW_FRAME_END   (0x01 << 2)
 
+namespace esphome::usb_webcam {
+
 static EventGroupHandle_t s_evt_handle;
 static uint32_t s_drop_frame_size = 0;
 static camera_fb_t s_fb;
@@ -39,9 +42,6 @@ void esp_camera_fb_return(camera_fb_t *fb)
     xEventGroupSetBits(s_evt_handle, BIT2_NEW_FRAME_END);
     return;
 }
-
-namespace esphome {
-namespace esp32_camera {
 
 static void camera_frame_cb(uvc_frame_t *frame, void *ptr)
 {
@@ -106,7 +106,7 @@ static void stream_state_changed_cb(usb_stream_state_t event, void *arg)
     }
 }
 
-esp_err_t esp_camera_init(ESP32CameraFrameSize fs, uint32_t fps) {
+esp_err_t esp_camera_init(USBWebCamFrameSize fs, uint32_t fps) {
 #ifdef CONFIG_ESP32_S3_USB_OTG
   bsp_usb_mode_select_host();
   bsp_usb_host_power_mode(BSP_USB_HOST_POWER_MODE_USB_DEV, true);
@@ -147,24 +147,24 @@ esp_err_t esp_camera_init(ESP32CameraFrameSize fs, uint32_t fps) {
   };
 
   switch (fs) {
-    case ESP32_CAMERA_SIZE_160X120:   uvc_config.frame_width = 160;  uvc_config.frame_height = 120; break;
-    case ESP32_CAMERA_SIZE_176X144:   uvc_config.frame_width = 176;  uvc_config.frame_height = 144; break;
-    case ESP32_CAMERA_SIZE_240X176:   uvc_config.frame_width = 240;  uvc_config.frame_height = 176; break;
-    case ESP32_CAMERA_SIZE_320X240:   uvc_config.frame_width = 320;  uvc_config.frame_height = 240; break;
-    case ESP32_CAMERA_SIZE_400X296:   uvc_config.frame_width = 400;  uvc_config.frame_height = 296; break;
-    case ESP32_CAMERA_SIZE_640X480:   uvc_config.frame_width = 640;  uvc_config.frame_height = 480; break;
-    case ESP32_CAMERA_SIZE_800X600:   uvc_config.frame_width = 800;  uvc_config.frame_height = 600; break;
-    case ESP32_CAMERA_SIZE_1024X768:  uvc_config.frame_width = 1024; uvc_config.frame_height = 768; break;
-    case ESP32_CAMERA_SIZE_1280X1024: uvc_config.frame_width = 1280; uvc_config.frame_height = 1024; break;
-    case ESP32_CAMERA_SIZE_1600X1200: uvc_config.frame_width = 1600; uvc_config.frame_height = 1200; break;
-    case ESP32_CAMERA_SIZE_1920X1080: uvc_config.frame_width = 1920; uvc_config.frame_height = 1080; break;
-    case ESP32_CAMERA_SIZE_720X1280:  uvc_config.frame_width = 720;  uvc_config.frame_height = 1280; break;
-    case ESP32_CAMERA_SIZE_864X1536:  uvc_config.frame_width = 864;  uvc_config.frame_height = 1536; break;
-    case ESP32_CAMERA_SIZE_2048X1536: uvc_config.frame_width = 2048; uvc_config.frame_height = 1536; break;
-    case ESP32_CAMERA_SIZE_2560X1440: uvc_config.frame_width = 2560; uvc_config.frame_height = 1440; break;
-    case ESP32_CAMERA_SIZE_2560X1600: uvc_config.frame_width = 2560; uvc_config.frame_height = 1600; break;
-    case ESP32_CAMERA_SIZE_1080X1920: uvc_config.frame_width = 1080; uvc_config.frame_height = 1920; break;
-    case ESP32_CAMERA_SIZE_2560X1920: uvc_config.frame_width = 2560; uvc_config.frame_height = 1920; break;
+    case USB_WEBCAM_SIZE_160X120:   uvc_config.frame_width = 160;  uvc_config.frame_height = 120; break;
+    case USB_WEBCAM_SIZE_176X144:   uvc_config.frame_width = 176;  uvc_config.frame_height = 144; break;
+    case USB_WEBCAM_SIZE_240X176:   uvc_config.frame_width = 240;  uvc_config.frame_height = 176; break;
+    case USB_WEBCAM_SIZE_320X240:   uvc_config.frame_width = 320;  uvc_config.frame_height = 240; break;
+    case USB_WEBCAM_SIZE_400X296:   uvc_config.frame_width = 400;  uvc_config.frame_height = 296; break;
+    case USB_WEBCAM_SIZE_640X480:   uvc_config.frame_width = 640;  uvc_config.frame_height = 480; break;
+    case USB_WEBCAM_SIZE_800X600:   uvc_config.frame_width = 800;  uvc_config.frame_height = 600; break;
+    case USB_WEBCAM_SIZE_1024X768:  uvc_config.frame_width = 1024; uvc_config.frame_height = 768; break;
+    case USB_WEBCAM_SIZE_1280X1024: uvc_config.frame_width = 1280; uvc_config.frame_height = 1024; break;
+    case USB_WEBCAM_SIZE_1600X1200: uvc_config.frame_width = 1600; uvc_config.frame_height = 1200; break;
+    case USB_WEBCAM_SIZE_1920X1080: uvc_config.frame_width = 1920; uvc_config.frame_height = 1080; break;
+    case USB_WEBCAM_SIZE_720X1280:  uvc_config.frame_width = 720;  uvc_config.frame_height = 1280; break;
+    case USB_WEBCAM_SIZE_864X1536:  uvc_config.frame_width = 864;  uvc_config.frame_height = 1536; break;
+    case USB_WEBCAM_SIZE_2048X1536: uvc_config.frame_width = 2048; uvc_config.frame_height = 1536; break;
+    case USB_WEBCAM_SIZE_2560X1440: uvc_config.frame_width = 2560; uvc_config.frame_height = 1440; break;
+    case USB_WEBCAM_SIZE_2560X1600: uvc_config.frame_width = 2560; uvc_config.frame_height = 1600; break;
+    case USB_WEBCAM_SIZE_1080X1920: uvc_config.frame_width = 1080; uvc_config.frame_height = 1920; break;
+    case USB_WEBCAM_SIZE_2560X1920: uvc_config.frame_width = 2560; uvc_config.frame_height = 1920; break;
     default: return ESP_ERR_INVALID_ARG;
   }
   /* config to enable uvc function */
@@ -188,9 +188,9 @@ esp_err_t esp_camera_init(ESP32CameraFrameSize fs, uint32_t fps) {
 }
 
 /* ---------------- public API (derivated) ---------------- */
-void ESP32Camera::setup() {
+void USBWebCam::setup() {
   //esp_log_level_set(TAG, ESP_LOG_DEBUG);
-  global_esp32_camera = this;
+  global_usb_webcam = this;
 
   /* initialize time to now */
   this->last_update_ = esp_timer_get_time();
@@ -210,71 +210,71 @@ void ESP32Camera::setup() {
   /* initialize RTOS */
   this->framebuffer_get_queue_ = xQueueCreate(1, sizeof(camera_fb_t *));
   this->framebuffer_return_queue_ = xQueueCreate(1, sizeof(camera_fb_t *));
-  xTaskCreate(&ESP32Camera::framebuffer_task,
-                          "framebuffer_tsk",   // name
-                          1024,                // stack size
+  xTaskCreate(&USBWebCam::framebuffer_task,
+                          "USBWebCamTsk",      // name
+                          1536,                // stack size
                           nullptr,             // task pv params
                           2,                   // priority
                           nullptr              // handle
   );
 }
 
-void ESP32Camera::dump_config() {
+void USBWebCam::dump_config() {
   ESP_LOGCONFIG(TAG, "ESP32 USB WebCamera:");
   ESP_LOGCONFIG(TAG, "  Name: %s", this->name_.c_str());
   switch (frame_size) {
-    case ESP32_CAMERA_SIZE_160X120:
+    case USB_WEBCAM_SIZE_160X120:
       ESP_LOGCONFIG(TAG, "  Resolution: 160x120 (QQVGA)");
       break;
-    case ESP32_CAMERA_SIZE_176X144:
+    case USB_WEBCAM_SIZE_176X144:
       ESP_LOGCONFIG(TAG, "  Resolution: 176x144 (QCIF)");
       break;
-    case ESP32_CAMERA_SIZE_240X176:
+    case USB_WEBCAM_SIZE_240X176:
       ESP_LOGCONFIG(TAG, "  Resolution: 240x176 (HQVGA)");
       break;
-    case ESP32_CAMERA_SIZE_320X240:
+    case USB_WEBCAM_SIZE_320X240:
       ESP_LOGCONFIG(TAG, "  Resolution: 320x240 (QVGA)");
       break;
-    case ESP32_CAMERA_SIZE_400X296:
+    case USB_WEBCAM_SIZE_400X296:
       ESP_LOGCONFIG(TAG, "  Resolution: 400x296 (CIF)");
       break;
-    case ESP32_CAMERA_SIZE_640X480:
+    case USB_WEBCAM_SIZE_640X480:
       ESP_LOGCONFIG(TAG, "  Resolution: 640x480 (VGA)");
       break;
-    case ESP32_CAMERA_SIZE_800X600:
+    case USB_WEBCAM_SIZE_800X600:
       ESP_LOGCONFIG(TAG, "  Resolution: 800x600 (SVGA)");
       break;
-    case ESP32_CAMERA_SIZE_1024X768:
+    case USB_WEBCAM_SIZE_1024X768:
       ESP_LOGCONFIG(TAG, "  Resolution: 1024x768 (XGA)");
       break;
-    case ESP32_CAMERA_SIZE_1280X1024:
+    case USB_WEBCAM_SIZE_1280X1024:
       ESP_LOGCONFIG(TAG, "  Resolution: 1280x1024 (SXGA)");
       break;
-    case ESP32_CAMERA_SIZE_1600X1200:
+    case USB_WEBCAM_SIZE_1600X1200:
       ESP_LOGCONFIG(TAG, "  Resolution: 1600x1200 (UXGA)");
       break;
-    case ESP32_CAMERA_SIZE_1920X1080:
+    case USB_WEBCAM_SIZE_1920X1080:
       ESP_LOGCONFIG(TAG, "  Resolution: 1920x1080 (FHD)");
       break;
-    case ESP32_CAMERA_SIZE_720X1280:
+    case USB_WEBCAM_SIZE_720X1280:
       ESP_LOGCONFIG(TAG, "  Resolution: 720x1280 (P_HD)");
       break;
-    case ESP32_CAMERA_SIZE_864X1536:
+    case USB_WEBCAM_SIZE_864X1536:
       ESP_LOGCONFIG(TAG, "  Resolution: 864x1536 (P_3MP)");
       break;
-    case ESP32_CAMERA_SIZE_2048X1536:
+    case USB_WEBCAM_SIZE_2048X1536:
       ESP_LOGCONFIG(TAG, "  Resolution: 2048x1536 (QXGA)");
       break;
-    case ESP32_CAMERA_SIZE_2560X1440:
+    case USB_WEBCAM_SIZE_2560X1440:
       ESP_LOGCONFIG(TAG, "  Resolution: 2560x1440 (QHD)");
       break;
-    case ESP32_CAMERA_SIZE_2560X1600:
+    case USB_WEBCAM_SIZE_2560X1600:
       ESP_LOGCONFIG(TAG, "  Resolution: 2560x1600 (WQXGA)");
       break;
-    case ESP32_CAMERA_SIZE_1080X1920:
+    case USB_WEBCAM_SIZE_1080X1920:
       ESP_LOGCONFIG(TAG, "  Resolution: 1080x1920 (P_FHD)");
       break;
-    case ESP32_CAMERA_SIZE_2560X1920:
+    case USB_WEBCAM_SIZE_2560X1920:
       ESP_LOGCONFIG(TAG, "  Resolution: 2560x1920 (QSXGA)");
       break;
   };
@@ -288,7 +288,7 @@ void ESP32Camera::dump_config() {
   }
 }
 
-void ESP32Camera::loop() {
+void USBWebCam::loop() {
   // check if we can return the image
   if (this->can_return_image_()) {
     // return image
@@ -327,7 +327,7 @@ void ESP32Camera::loop() {
     xQueueSend(this->framebuffer_return_queue_, &fb, portMAX_DELAY);
     return;
   }
-  this->current_image_ = std::make_shared<CameraImage>(fb, this->single_requesters_ | this->stream_requesters_);
+  this->current_image_ = std::make_shared<USBWebCamImage>(fb, this->single_requesters_ | this->stream_requesters_);
 
   ESP_LOGD(TAG, "Got Image %u: %ux%u %uB", (unsigned int)fb->timestamp.tv_sec, fb->width, fb->height, fb->len);
   this->new_image_callback_.call(this->current_image_);
@@ -335,95 +335,94 @@ void ESP32Camera::loop() {
   this->single_requesters_ = 0;
 }
 
-float ESP32Camera::get_setup_priority() const { return setup_priority::DATA; }
+float USBWebCam::get_setup_priority() const { return setup_priority::DATA; }
 
 /* ---------------- constructors ---------------- */
-ESP32Camera::ESP32Camera() {
-  frame_size = ESP32_CAMERA_SIZE_640X480;
-  global_esp32_camera = this;
+USBWebCam::USBWebCam() {
+  frame_size = USB_WEBCAM_SIZE_640X480;
+  global_usb_webcam = this;
 }
 
 /* ---------------- setters ---------------- */
 
 /* set image parameters */
-void ESP32Camera::set_frame_size(ESP32CameraFrameSize size) {
+void USBWebCam::set_frame_size(USBWebCamFrameSize size) {
   this->frame_size = size;
 }
-void ESP32Camera::set_drop_size(uint32_t drop_size) {
+void USBWebCam::set_drop_size(uint32_t drop_size) {
   s_drop_frame_size = drop_size;
 }
 /* set fps */
-void ESP32Camera::set_max_update_interval(uint32_t max_update_interval) {
+void USBWebCam::set_max_update_interval(uint32_t max_update_interval) {
   this->max_update_interval_ = max_update_interval;
 }
-void ESP32Camera::set_idle_update_interval(uint32_t idle_update_interval) {
+void USBWebCam::set_idle_update_interval(uint32_t idle_update_interval) {
   this->idle_update_interval_ = idle_update_interval;
 }
 
 /* ---------------- public API (specific) ---------------- */
-void ESP32Camera::add_image_callback(std::function<void(std::shared_ptr<CameraImage>)> &&f) {
+void USBWebCam::add_image_callback(std::function<void(std::shared_ptr<CameraImage>)> &&f) {
   this->new_image_callback_.add(std::move(f));
 }
-void ESP32Camera::add_stream_start_callback(std::function<void()> &&callback) {
+void USBWebCam::add_stream_start_callback(std::function<void()> &&callback) {
   this->stream_start_callback_.add(std::move(callback));
 }
-void ESP32Camera::add_stream_stop_callback(std::function<void()> &&callback) {
+void USBWebCam::add_stream_stop_callback(std::function<void()> &&callback) {
   this->stream_stop_callback_.add(std::move(callback));
 }
-void ESP32Camera::start_stream(CameraRequester requester) {
+void USBWebCam::start_stream(CameraRequester requester) {
   this->stream_start_callback_.call();
   this->stream_requesters_ |= (1U << requester);
 }
-void ESP32Camera::stop_stream(CameraRequester requester) {
+void USBWebCam::stop_stream(CameraRequester requester) {
   this->stream_stop_callback_.call();
   this->stream_requesters_ &= ~(1U << requester);
 }
-void ESP32Camera::request_image(CameraRequester requester) { this->single_requesters_ |= (1U << requester); }
-void ESP32Camera::update_camera_parameters() {
-}
+void USBWebCam::request_image(CameraRequester requester) { this->single_requesters_ |= (1U << requester); }
+camera::CameraImageReader *USBWebCam::create_image_reader() { return new USBWebCamImageReader; }
+void USBWebCam::update_camera_parameters() {}
 
 /* ---------------- Internal methods ---------------- */
-bool ESP32Camera::has_requested_image_() const { return this->single_requesters_ || this->stream_requesters_; }
-bool ESP32Camera::can_return_image_() const { return this->current_image_.use_count() == 1; }
+bool USBWebCam::has_requested_image_() const { return this->single_requesters_ || this->stream_requesters_; }
+bool USBWebCam::can_return_image_() const { return this->current_image_.use_count() == 1; }
 
 
-void ESP32Camera::framebuffer_task(void *pv) {
+void USBWebCam::framebuffer_task(void *pv) {
   while (true) {
     camera_fb_t *framebuffer = esp_camera_fb_get();
-    xQueueSend(global_esp32_camera->framebuffer_get_queue_, &framebuffer, portMAX_DELAY);
-    xQueueReceive(global_esp32_camera->framebuffer_return_queue_, &framebuffer, portMAX_DELAY);
+    xQueueSend(global_usb_webcam->framebuffer_get_queue_, &framebuffer, portMAX_DELAY);
+    xQueueReceive(global_usb_webcam->framebuffer_return_queue_, &framebuffer, portMAX_DELAY);
     esp_camera_fb_return(framebuffer);
   }
 }
 
-ESP32Camera *global_esp32_camera;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+USBWebCam *global_usb_webcam;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 /* ---------------- CameraImageReader class ---------------- */
-void CameraImageReader::set_image(std::shared_ptr<CameraImage> image) {
-  this->image_ = std::move(image);
+void USBWebCamImageReader::set_image(std::shared_ptr<CameraImage> image) {
+  this->image_ = std::static_pointer_cast<USBWebCamImage>(std::move(image));
   this->offset_ = 0;
 }
-size_t CameraImageReader::available() const {
+size_t USBWebCamImageReader::available() const {
   if (!this->image_)
     return 0;
 
   return this->image_->get_data_length() - this->offset_;
 }
-void CameraImageReader::return_image() { this->image_.reset(); }
-void CameraImageReader::consume_data(size_t consumed) { this->offset_ += consumed; }
-uint8_t *CameraImageReader::peek_data_buffer() { return this->image_->get_data_buffer() + this->offset_; }
+void USBWebCamImageReader::return_image() { this->image_.reset(); }
+void USBWebCamImageReader::consume_data(size_t consumed) { this->offset_ += consumed; }
+uint8_t *USBWebCamImageReader::peek_data_buffer() { return this->image_->get_data_buffer() + this->offset_; }
 
 /* ---------------- CameraImage class ---------------- */
-CameraImage::CameraImage(camera_fb_t *buffer, uint8_t requesters) : buffer_(buffer), requesters_(requesters) {}
+USBWebCamImage::USBWebCamImage(camera_fb_t *buffer, uint8_t requesters) : buffer_(buffer), requesters_(requesters) {}
 
-camera_fb_t *CameraImage::get_raw_buffer() { return this->buffer_; }
-uint8_t *CameraImage::get_data_buffer() { return this->buffer_->buf; }
-size_t CameraImage::get_data_length() { return this->buffer_->len; }
-bool CameraImage::was_requested_by(CameraRequester requester) const {
+camera_fb_t *USBWebCamImage::get_raw_buffer() { return this->buffer_; }
+uint8_t *USBWebCamImage::get_data_buffer() { return this->buffer_->buf; }
+size_t USBWebCamImage::get_data_length() { return this->buffer_->len; }
+bool USBWebCamImage::was_requested_by(CameraRequester requester) const {
   return (this->requesters_ & (1 << requester)) != 0;
 }
 
-}  // namespace esp32_camera
-}  // namespace esphome
+}  // namespace esphome::usb_webcam
 
 #endif

@@ -19,58 +19,58 @@ try:
 except:
   from esphome.core.entity_helpers import setup_entity
 
-DEPENDENCIES = ["esp32", "esp32_camera"]
+DEPENDENCIES = ["esp32", "camera"]
 
-AUTO_LOAD = ["esp32_camera"]
+AUTO_LOAD = ["camera", "psram"]
 
-esp32_camera_ns = cg.esphome_ns.namespace("esp32_camera")
-ESP32Camera = esp32_camera_ns.class_("ESP32Camera", cg.PollingComponent, cg.EntityBase)
-ESP32CameraStreamStartTrigger = esp32_camera_ns.class_(
-    "ESP32CameraStreamStartTrigger",
+usb_webcam_ns = cg.esphome_ns.namespace("usb_webcam")
+USBWebCam = usb_webcam_ns.class_("USBWebCam", cg.PollingComponent, cg.EntityBase)
+USBWebCamStreamStartTrigger = usb_webcam_ns.class_(
+    "USBWebCamStreamStartTrigger",
     automation.Trigger.template(),
 )
-ESP32CameraStreamStopTrigger = esp32_camera_ns.class_(
-    "ESP32CameraStreamStopTrigger",
+USBWebCamStreamStopTrigger = usb_webcam_ns.class_(
+    "USBWebCamStreamStopTrigger",
     automation.Trigger.template(),
 )
-ESP32CameraFrameSize = esp32_camera_ns.enum("ESP32CameraFrameSize")
+USBWebCamFrameSize = usb_webcam_ns.enum("USBWebCamFrameSize")
 FRAME_SIZES = {
-    "160X120": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_160X120,
-    "QQVGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_160X120,
-    "176X144": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_176X144,
-    "QCIF": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_176X144,
-    "240X176": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_240X176,
-    "HQVGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_240X176,
-    "320X240": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_320X240,
-    "QVGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_320X240,
-    "400X296": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_400X296,
-    "CIF": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_400X296,
-    "640X480": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_640X480,
-    "VGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_640X480,
-    "800X600": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_800X600,
-    "SVGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_800X600,
-    "1024X768": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1024X768,
-    "XGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1024X768,
-    "1280X1024": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1280X1024,
-    "SXGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1280X1024,
-    "1600X1200": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1600X1200,
-    "UXGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1600X1200,
-    "1920X1080": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1920X1080,
-    "FHD": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1920X1080,
-    "720X1280": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_720X1280,
-    "PHD": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_720X1280,
-    "864X1536": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_864X1536,
-    "P3MP": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_864X1536,
-    "2048X1536": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_2048X1536,
-    "QXGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_2048X1536,
-    "2560X1440": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_2560X1440,
-    "QHD": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_2560X1440,
-    "2560X1600": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_2560X1600,
-    "WQXGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_2560X1600,
-    "1080X1920": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1080X1920,
-    "PFHD": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_1080X1920,
-    "2560X1920": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_2560X1920,
-    "QSXGA": ESP32CameraFrameSize.ESP32_CAMERA_SIZE_2560X1920,
+    "160X120": USBWebCamFrameSize.USB_WEBCAM_SIZE_160X120,
+    "QQVGA": USBWebCamFrameSize.USB_WEBCAM_SIZE_160X120,
+    "176X144": USBWebCamFrameSize.USB_WEBCAM_SIZE_176X144,
+    "QCIF": USBWebCamFrameSize.USB_WEBCAM_SIZE_176X144,
+    "240X176": USBWebCamFrameSize.USB_WEBCAM_SIZE_240X176,
+    "HQVGA": USBWebCamFrameSize.USB_WEBCAM_SIZE_240X176,
+    "320X240": USBWebCamFrameSize.USB_WEBCAM_SIZE_320X240,
+    "QVGA": USBWebCamFrameSize.USB_WEBCAM_SIZE_320X240,
+    "400X296": USBWebCamFrameSize.USB_WEBCAM_SIZE_400X296,
+    "CIF": USBWebCamFrameSize.USB_WEBCAM_SIZE_400X296,
+    "640X480": USBWebCamFrameSize.USB_WEBCAM_SIZE_640X480,
+    "VGA": USBWebCamFrameSize.USB_WEBCAM_SIZE_640X480,
+    "800X600": USBWebCamFrameSize.USB_WEBCAM_SIZE_800X600,
+    "SVGA": USBWebCamFrameSize.USB_WEBCAM_SIZE_800X600,
+    "1024X768": USBWebCamFrameSize.USB_WEBCAM_SIZE_1024X768,
+    "XGA": USBWebCamFrameSize.USB_WEBCAM_SIZE_1024X768,
+    "1280X1024": USBWebCamFrameSize.USB_WEBCAM_SIZE_1280X1024,
+    "SXGA": USBWebCamFrameSize.USB_WEBCAM_SIZE_1280X1024,
+    "1600X1200": USBWebCamFrameSize.USB_WEBCAM_SIZE_1600X1200,
+    "UXGA": USBWebCamFrameSize.USB_WEBCAM_SIZE_1600X1200,
+    "1920X1080": USBWebCamFrameSize.USB_WEBCAM_SIZE_1920X1080,
+    "FHD": USBWebCamFrameSize.USB_WEBCAM_SIZE_1920X1080,
+    "720X1280": USBWebCamFrameSize.USB_WEBCAM_SIZE_720X1280,
+    "PHD": USBWebCamFrameSize.USB_WEBCAM_SIZE_720X1280,
+    "864X1536": USBWebCamFrameSize.USB_WEBCAM_SIZE_864X1536,
+    "P3MP": USBWebCamFrameSize.USB_WEBCAM_SIZE_864X1536,
+    "2048X1536": USBWebCamFrameSize.USB_WEBCAM_SIZE_2048X1536,
+    "QXGA": USBWebCamFrameSize.USB_WEBCAM_SIZE_2048X1536,
+    "2560X1440": USBWebCamFrameSize.USB_WEBCAM_SIZE_2560X1440,
+    "QHD": USBWebCamFrameSize.USB_WEBCAM_SIZE_2560X1440,
+    "2560X1600": USBWebCamFrameSize.USB_WEBCAM_SIZE_2560X1600,
+    "WQXGA": USBWebCamFrameSize.USB_WEBCAM_SIZE_2560X1600,
+    "1080X1920": USBWebCamFrameSize.USB_WEBCAM_SIZE_1080X1920,
+    "PFHD": USBWebCamFrameSize.USB_WEBCAM_SIZE_1080X1920,
+    "2560X1920": USBWebCamFrameSize.USB_WEBCAM_SIZE_2560X1920,
+    "QSXGA": USBWebCamFrameSize.USB_WEBCAM_SIZE_2560X1920,
 }
 
 # frames
@@ -84,7 +84,7 @@ CONF_ON_STREAM_STOP = "on_stream_stop"
 
 CONFIG_SCHEMA = cv.ENTITY_BASE_SCHEMA.extend(
     {
-        cv.GenerateID(): cv.declare_id(ESP32Camera),
+        cv.GenerateID(): cv.declare_id(USBWebCam),
         # image
         cv.Optional(CONF_RESOLUTION, default="640X480"): cv.enum(
             FRAME_SIZES, upper=True
@@ -102,14 +102,14 @@ CONFIG_SCHEMA = cv.ENTITY_BASE_SCHEMA.extend(
         cv.Optional(CONF_ON_STREAM_START): automation.validate_automation(
             {
                 cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(
-                    ESP32CameraStreamStartTrigger
+                    USBWebCamStreamStartTrigger
                 ),
             }
         ),
         cv.Optional(CONF_ON_STREAM_STOP): automation.validate_automation(
             {
                 cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(
-                    ESP32CameraStreamStopTrigger
+                    USBWebCamStreamStopTrigger
                 ),
             }
         ),
@@ -122,6 +122,7 @@ def _final_validate(config):
 FINAL_VALIDATE_SCHEMA = _final_validate
 
 async def to_code(config):
+    cg.add_define("USE_CAMERA")
     var = cg.new_Pvariable(config[CONF_ID])
     await setup_entity(var, config, "camera")
     await cg.register_component(var, config)
@@ -134,7 +135,7 @@ async def to_code(config):
     cg.add(var.set_drop_size(config[CONF_DROP_FRAME_SIZE]))
     cg.add(var.set_frame_size(config[CONF_RESOLUTION]))
 
-    cg.add_define("USE_ESP32_CAMERA")
+    cg.add_define("USE_USB_WEBCAM")
 
     assert(CORE.using_esp_idf)
     add_idf_component(
@@ -142,6 +143,7 @@ async def to_code(config):
             ref="v2.0",
             repo="https://github.com/espressif/esp-iot-solution.git",
             path="components/usb/usb_stream",
+            ref="v2.0",
             refresh=TimePeriod(days=5)
     )
     # no need in cg.add_library("espressif/esp32-camera", "1.0.0")
