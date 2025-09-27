@@ -143,7 +143,6 @@ async def to_code(config):
             ref="v2.0",
             repo="https://github.com/espressif/esp-iot-solution.git",
             path="components/usb/usb_stream",
-            ref="v2.0",
             refresh=TimePeriod(days=5)
     )
     # no need in cg.add_library("espressif/esp32-camera", "1.0.0")
