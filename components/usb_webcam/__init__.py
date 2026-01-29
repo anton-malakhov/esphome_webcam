@@ -137,13 +137,12 @@ async def to_code(config):
 
     cg.add_define("USE_USB_WEBCAM")
 
-    assert(CORE.using_esp_idf)
+    # assert(CORE.using_esp_idf)
     add_idf_component(
             name="usb_stream",
             ref="v2.0",
             repo="https://github.com/espressif/esp-iot-solution.git",
-            path="components/usb/usb_stream",
-            refresh=TimePeriod(days=5)
+            path="components/usb/usb_stream"
     )
     # no need in cg.add_library("espressif/esp32-camera", "1.0.0")
     # esp_camera.h and sensor.h are taken from it directly

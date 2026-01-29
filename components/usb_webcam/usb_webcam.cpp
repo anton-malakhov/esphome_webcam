@@ -330,7 +330,9 @@ void USBWebCam::loop() {
   this->current_image_ = std::make_shared<USBWebCamImage>(fb, this->single_requesters_ | this->stream_requesters_);
 
   ESP_LOGD(TAG, "Got Image %u: %ux%u %uB", (unsigned int)fb->timestamp.tv_sec, fb->width, fb->height, fb->len);
-  this->new_image_callback_.call(this->current_image_);
+  for (auto *listener : this->listeners_) {
+    listener->on_camera_image(this->current_image_);
+  }
   this->last_update_ = now;
   this->single_requesters_ = 0;
 }
@@ -361,9 +363,6 @@ void USBWebCam::set_idle_update_interval(uint32_t idle_update_interval) {
 }
 
 /* ---------------- public API (specific) ---------------- */
-void USBWebCam::add_image_callback(std::function<void(std::shared_ptr<CameraImage>)> &&f) {
-  this->new_image_callback_.add(std::move(f));
-}
 void USBWebCam::add_stream_start_callback(std::function<void()> &&callback) {
   this->stream_start_callback_.add(std::move(callback));
 }

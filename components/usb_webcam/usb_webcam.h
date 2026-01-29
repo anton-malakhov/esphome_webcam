@@ -119,10 +119,12 @@ class USBWebCam : public camera::Camera {
   void request_image(camera::CameraRequester requester) override;
   void update_camera_parameters();
 
-  void add_image_callback(std::function<void(std::shared_ptr<camera::CameraImage>)> &&callback) override;
+  /// Add a listener to receive camera events
+  void add_listener(camera::CameraListener *listener) override { this->listeners_.push_back(listener); }
+  camera::CameraImageReader *create_image_reader() override;
+
   void add_stream_start_callback(std::function<void()> &&callback);
   void add_stream_stop_callback(std::function<void()> &&callback);
-  camera::CameraImageReader *create_image_reader() override;
 
  protected:
   /* internal methods */
@@ -144,7 +146,7 @@ class USBWebCam : public camera::Camera {
   uint8_t stream_requesters_{0};
   QueueHandle_t framebuffer_get_queue_;
   QueueHandle_t framebuffer_return_queue_;
-  CallbackManager<void(std::shared_ptr<camera::CameraImage>)> new_image_callback_{};
+  std::vector<camera::CameraListener *> listeners_;
   CallbackManager<void()> stream_start_callback_{};
   CallbackManager<void()> stream_stop_callback_{};
 
