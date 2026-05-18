@@ -28,8 +28,87 @@ static const char *const TAG = "usb_webcam";
 static EventGroupHandle_t s_evt_handle;
 static uint32_t s_drop_frame_size = 0;
 static camera_fb_t s_fb;
+static uint32_t s_uvc_frames_seen = 0;
+static uint32_t s_uvc_frames_accepted = 0;
+static uint32_t s_uvc_frames_small_drop = 0;
+static uint32_t s_uvc_frames_queue_drop = 0;
+static uint32_t s_uvc_stats_prev_seen = 0;
+static uint32_t s_uvc_stats_prev_accepted = 0;
+static uint32_t s_uvc_stats_prev_small_drop = 0;
+static uint32_t s_uvc_stats_prev_queue_drop = 0;
+static int64_t s_uvc_stats_last_ms = 0;
+
+static void maybe_log_uvc_stats_() {
+  const int64_t now_ms = esp_timer_get_time() / 1000;
+  if (s_uvc_stats_last_ms != 0 && now_ms - s_uvc_stats_last_ms < 5000)
+    return;
+
+  const int64_t elapsed_ms = s_uvc_stats_last_ms == 0 ? 0 : now_ms - s_uvc_stats_last_ms;
+  const uint32_t seen_delta = s_uvc_frames_seen - s_uvc_stats_prev_seen;
+  const uint32_t accepted_delta = s_uvc_frames_accepted - s_uvc_stats_prev_accepted;
+  const uint32_t small_drop_delta = s_uvc_frames_small_drop - s_uvc_stats_prev_small_drop;
+  const uint32_t queue_drop_delta = s_uvc_frames_queue_drop - s_uvc_stats_prev_queue_drop;
+  const float seen_fps = elapsed_ms == 0 ? 0.0f : (seen_delta * 1000.0f) / elapsed_ms;
+  const float accepted_fps = elapsed_ms == 0 ? 0.0f : (accepted_delta * 1000.0f) / elapsed_ms;
+
+  s_uvc_stats_last_ms = now_ms;
+  s_uvc_stats_prev_seen = s_uvc_frames_seen;
+  s_uvc_stats_prev_accepted = s_uvc_frames_accepted;
+  s_uvc_stats_prev_small_drop = s_uvc_frames_small_drop;
+  s_uvc_stats_prev_queue_drop = s_uvc_frames_queue_drop;
+
+  ESP_LOGI(TAG, "UVC stats: seen=%u(+%u %.1ffps) accepted=%u(+%u %.1ffps) small_drop=%u(+%u) queue_drop=%u(+%u)",
+           static_cast<unsigned>(s_uvc_frames_seen), static_cast<unsigned>(seen_delta), seen_fps,
+           static_cast<unsigned>(s_uvc_frames_accepted), static_cast<unsigned>(accepted_delta), accepted_fps,
+           static_cast<unsigned>(s_uvc_frames_small_drop), static_cast<unsigned>(small_drop_delta),
+           static_cast<unsigned>(s_uvc_frames_queue_drop), static_cast<unsigned>(queue_drop_delta));
+}
+
+#ifdef USE_UVC_DISPLAY_PREVIEW_RAW_TAP
+static const size_t UVC_FRAME_QUEUE_DEPTH = 4;
+
+struct QueuedFrame {
+  camera_fb_t fb;
+  uint8_t *buffer;
+  size_t capacity;
+};
+
+static QueueHandle_t s_free_frame_queue = nullptr;
+static QueueHandle_t s_ready_frame_queue = nullptr;
+static QueuedFrame s_queued_frames[UVC_FRAME_QUEUE_DEPTH];
+
+static bool init_frame_queues_() {
+  s_free_frame_queue = xQueueCreate(UVC_FRAME_QUEUE_DEPTH, sizeof(QueuedFrame *));
+  s_ready_frame_queue = xQueueCreate(UVC_FRAME_QUEUE_DEPTH, sizeof(QueuedFrame *));
+  if (s_free_frame_queue == nullptr || s_ready_frame_queue == nullptr) {
+    ESP_LOGE(TAG, "UVC frame queue create failed");
+    return false;
+  }
+
+  for (size_t i = 0; i < UVC_FRAME_QUEUE_DEPTH; i++) {
+    s_queued_frames[i].buffer = (uint8_t *) heap_caps_malloc_prefer(UVC_XFER_BUFFER_SIZE, 2, MALLOC_CAP_SPIRAM, 0);
+    s_queued_frames[i].capacity = UVC_XFER_BUFFER_SIZE;
+    memset(&s_queued_frames[i].fb, 0, sizeof(camera_fb_t));
+    if (s_queued_frames[i].buffer == nullptr) {
+      ESP_LOGE(TAG, "UVC queued frame allocation failed");
+      return false;
+    }
+    QueuedFrame *queued = &s_queued_frames[i];
+    xQueueSend(s_free_frame_queue, &queued, portMAX_DELAY);
+  }
+  return true;
+}
+#endif
 
 camera_fb_t *esp_camera_fb_get() {
+#ifdef USE_UVC_DISPLAY_PREVIEW_RAW_TAP
+  if (s_ready_frame_queue != nullptr) {
+    QueuedFrame *queued = nullptr;
+    xEventGroupSetBits(s_evt_handle, BIT0_FRAME_START);
+    xQueueReceive(s_ready_frame_queue, &queued, portMAX_DELAY);
+    return queued == nullptr ? nullptr : &queued->fb;
+  }
+#endif
   xEventGroupSetBits(s_evt_handle, BIT0_FRAME_START);
   xEventGroupWaitBits(s_evt_handle, BIT1_NEW_FRAME_START, true, true,
                       portMAX_DELAY);
@@ -37,6 +116,17 @@ camera_fb_t *esp_camera_fb_get() {
 }
 
 void esp_camera_fb_return(camera_fb_t *fb) {
+#ifdef USE_UVC_DISPLAY_PREVIEW_RAW_TAP
+  if (s_free_frame_queue != nullptr && fb != nullptr) {
+    for (size_t i = 0; i < UVC_FRAME_QUEUE_DEPTH; i++) {
+      if (&s_queued_frames[i].fb == fb) {
+        QueuedFrame *queued = &s_queued_frames[i];
+        xQueueSend(s_free_frame_queue, &queued, portMAX_DELAY);
+        return;
+      }
+    }
+  }
+#endif
   xEventGroupSetBits(s_evt_handle, BIT2_NEW_FRAME_END);
   return;
 }
@@ -45,6 +135,9 @@ namespace esphome {
 namespace esp32_camera {
 
 static void camera_frame_cb(uvc_frame_t *frame, void *ptr) {
+  s_uvc_frames_seen++;
+  maybe_log_uvc_stats_();
+
   if (!(xEventGroupGetBits(s_evt_handle) & BIT0_FRAME_START)) {
     return;
   }
@@ -55,6 +148,7 @@ static void camera_frame_cb(uvc_frame_t *frame, void *ptr) {
       frame->data_bytes);
 
   if (frame->data_bytes < s_drop_frame_size) {
+    s_uvc_frames_small_drop++;
     ESP_LOGV(TAG, "Dropping frame size %u < %u", frame->data_bytes,
              s_drop_frame_size);
     return;
@@ -62,6 +156,47 @@ static void camera_frame_cb(uvc_frame_t *frame, void *ptr) {
 
   switch (frame->frame_format) {
   case UVC_FRAME_FORMAT_MJPEG:
+#ifdef USE_UVC_DISPLAY_PREVIEW_RAW_TAP
+    if (global_esp32_camera != nullptr) {
+      camera_fb_t raw_fb;
+      raw_fb.buf = (uint8_t *) frame->data;
+      raw_fb.len = frame->data_bytes;
+      raw_fb.width = frame->width;
+      raw_fb.height = frame->height;
+      raw_fb.format = PIXFORMAT_JPEG;
+      raw_fb.timestamp.tv_sec = frame->sequence;
+      global_esp32_camera->dispatch_raw_image(&raw_fb);
+    }
+
+    if (global_esp32_camera != nullptr && global_esp32_camera->has_active_request() &&
+        s_free_frame_queue != nullptr && s_ready_frame_queue != nullptr) {
+      QueuedFrame *queued = nullptr;
+      if (xQueueReceive(s_free_frame_queue, &queued, 0) == pdTRUE && queued != nullptr) {
+        if (frame->data_bytes <= queued->capacity) {
+          memcpy(queued->buffer, frame->data, frame->data_bytes);
+          queued->fb.buf = queued->buffer;
+          queued->fb.len = frame->data_bytes;
+          queued->fb.width = frame->width;
+          queued->fb.height = frame->height;
+          queued->fb.format = PIXFORMAT_JPEG;
+          queued->fb.timestamp.tv_sec = frame->sequence;
+          if (xQueueSend(s_ready_frame_queue, &queued, 0) != pdTRUE) {
+            s_uvc_frames_queue_drop++;
+            xQueueSend(s_free_frame_queue, &queued, 0);
+            return;
+          }
+          s_uvc_frames_accepted++;
+        } else {
+          s_uvc_frames_queue_drop++;
+          xQueueSend(s_free_frame_queue, &queued, 0);
+        }
+      } else {
+        s_uvc_frames_queue_drop++;
+      }
+      return;
+    }
+    return;
+#endif
     s_fb.buf = (uint8_t *)frame->data;
     s_fb.len = frame->data_bytes;
     s_fb.width = frame->width;
@@ -69,6 +204,7 @@ static void camera_frame_cb(uvc_frame_t *frame, void *ptr) {
     s_fb.format = PIXFORMAT_JPEG;
     s_fb.timestamp.tv_sec = frame->sequence;
     xEventGroupSetBits(s_evt_handle, BIT1_NEW_FRAME_START);
+    s_uvc_frames_accepted++;
     ESP_LOGV(TAG, "send frame = %u", frame->sequence);
     xEventGroupWaitBits(s_evt_handle, BIT2_NEW_FRAME_END, true, true,
                         portMAX_DELAY);
@@ -81,26 +217,54 @@ static void camera_frame_cb(uvc_frame_t *frame, void *ptr) {
   }
 }
 
+static void dump_uvc_frame_size_list_(const char *source) {
+  size_t frame_size = 0;
+  size_t frame_index = 0;
+  esp_err_t err = uvc_frame_size_list_get(NULL, &frame_size, &frame_index);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG, "UVC frame list unavailable from %s: %s", source,
+             esp_err_to_name(err));
+    return;
+  }
+
+  ESP_LOGI(TAG, "UVC: get frame list size = %u, current = %u (%s)",
+           static_cast<unsigned>(frame_size), static_cast<unsigned>(frame_index),
+           source);
+  if (frame_size == 0)
+    return;
+
+  uvc_frame_size_t *uvc_frame_list =
+      (uvc_frame_size_t *)malloc(frame_size * sizeof(uvc_frame_size_t));
+  if (uvc_frame_list == NULL) {
+    ESP_LOGW(TAG, "UVC frame list allocation failed: %u",
+             static_cast<unsigned>(frame_size));
+    return;
+  }
+
+  err = uvc_frame_size_list_get(uvc_frame_list, NULL, NULL);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG, "UVC frame list read failed from %s: %s", source,
+             esp_err_to_name(err));
+    free(uvc_frame_list);
+    return;
+  }
+
+  for (size_t i = 0; i < frame_size; i++) {
+    const uint32_t interval = uvc_frame_list[i].interval;
+    const uint32_t fps_x10 = interval == 0 ? 0 : (100000000UL + interval / 2) / interval;
+    ESP_LOGI(TAG, "\tframe[%u]%s = %ux%u interval=%u fps=%u.%u",
+             static_cast<unsigned>(i), i == frame_index ? "*" : "",
+             uvc_frame_list[i].width, uvc_frame_list[i].height,
+             static_cast<unsigned>(interval), static_cast<unsigned>(fps_x10 / 10),
+             static_cast<unsigned>(fps_x10 % 10));
+  }
+  free(uvc_frame_list);
+}
+
 static void stream_state_changed_cb(usb_stream_state_t event, void *arg) {
   switch (event) {
   case STREAM_CONNECTED: {
-    size_t frame_size = 0;
-    size_t frame_index = 0;
-    uvc_frame_size_list_get(NULL, &frame_size, &frame_index);
-    if (frame_size) {
-      ESP_LOGI(TAG, "UVC: get frame list size = %u, current = %u", frame_size,
-               frame_index);
-      uvc_frame_size_t *uvc_frame_list =
-          (uvc_frame_size_t *)malloc(frame_size * sizeof(uvc_frame_size_t));
-      uvc_frame_size_list_get(uvc_frame_list, NULL, NULL);
-      for (size_t i = 0; i < frame_size; i++) {
-        ESP_LOGI(TAG, "\tframe[%u] = %ux%u", i, uvc_frame_list[i].width,
-                 uvc_frame_list[i].height);
-      }
-      free(uvc_frame_list);
-    } else {
-      ESP_LOGW(TAG, "UVC: get frame list size = %u", frame_size);
-    }
+    dump_uvc_frame_size_list_("connect");
     ESP_LOGI(TAG, "Device connected");
     break;
   }
@@ -124,6 +288,11 @@ esp_err_t esp_camera_init(ESP32CameraFrameSize fs, uint32_t fps) {
     ESP_LOGE(TAG, "Event group create failed");
     assert(0);
   }
+#ifdef USE_UVC_DISPLAY_PREVIEW_RAW_TAP
+  if (!init_frame_queues_()) {
+    return ESP_ERR_NO_MEM;
+  }
+#endif
   /* malloc double buffer for usb payload, xfer_buffer_size >=
    * frame_buffer_size*/
   uint8_t *xfer_buffer_a = (uint8_t *)heap_caps_malloc_prefer(
@@ -488,6 +657,16 @@ void ESP32Camera::request_image(CameraRequester requester) {
   this->single_requesters_ |= (1U << requester);
 }
 void ESP32Camera::update_camera_parameters() {}
+void ESP32Camera::dump_frame_size_list() { dump_uvc_frame_size_list_("manual"); }
+bool ESP32Camera::has_active_request() const { return this->has_requested_image_(); }
+#ifdef USE_UVC_DISPLAY_PREVIEW_RAW_TAP
+void ESP32Camera::add_raw_image_callback(std::function<void(camera_fb_t *)> &&f) {
+  this->raw_image_callback_.add(std::move(f));
+}
+void ESP32Camera::dispatch_raw_image(camera_fb_t *fb) {
+  this->raw_image_callback_.call(fb);
+}
+#endif
 
 /* ---------------- Internal methods ---------------- */
 bool ESP32Camera::has_requested_image_() const {

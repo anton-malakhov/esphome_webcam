@@ -130,6 +130,12 @@ public:
   void stop_stream(CameraRequester requester);
   void request_image(CameraRequester requester);
   void update_camera_parameters();
+  void dump_frame_size_list();
+  bool has_active_request() const;
+#ifdef USE_UVC_DISPLAY_PREVIEW_RAW_TAP
+  void add_raw_image_callback(std::function<void(camera_fb_t *)> &&f);
+  void dispatch_raw_image(camera_fb_t *fb);
+#endif
 
   void add_stream_start_callback(std::function<void()> &&callback);
   void add_stream_stop_callback(std::function<void()> &&callback);
@@ -155,6 +161,9 @@ protected:
   QueueHandle_t framebuffer_get_queue_;
   QueueHandle_t framebuffer_return_queue_;
   CallbackManager<void(std::shared_ptr<CameraImage>)> new_image_callback_;
+#ifdef USE_UVC_DISPLAY_PREVIEW_RAW_TAP
+  CallbackManager<void(camera_fb_t *)> raw_image_callback_;
+#endif
   CallbackManager<void()> stream_start_callback_{};
   CallbackManager<void()> stream_stop_callback_{};
 
